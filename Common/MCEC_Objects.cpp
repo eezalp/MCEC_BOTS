@@ -34,7 +34,7 @@ namespace MCEC{
     float yPower = (joyY * 6 * py * tpy);
 
     Lpower = (xPower + yPower);
-    Rpower = (xPower - yPower);
+    Rpower = (xPower - yPower);    // balls
 
     // Apply the power to the motors
     ApplyPower(Lpower, Rpower);
@@ -69,13 +69,13 @@ namespace MCEC{
   void Drivetrain::ApplyPower(int lPow, int rPow){
       curPowerL = Lerp(curPowerL, lPow, 0.1f);
       curPowerR = Lerp(curPowerR, rPow, 0.1f);
-      leftMotors.spin(vex::reverse, curPowerL, vex::rpm);
-      rightMotors.spin(vex::forward, curPowerR, vex::rpm);
+      leftMotors.Spin(vex::reverse, curPowerR, vex::rpm);
+      rightMotors.Spin(vex::forward, curPowerR, vex::rpm);
   }
   void Drivetrain::Spin(float revs){
     ResetPositions();
-    rightMotors.spinTo(-revs, vex::rotationUnits::rev, false);
-    leftMotors.spinTo(revs, vex::rotationUnits::rev, true);
+      leftMotors.SpinTo(revs, vex::rotationUnits::rev, true);
+      rightMotors.SpinTo(-revs, vex::rotationUnits::rev, false);
   }
 
   void Drivetrain::DriveDist(float dL, float dR, int sec){
@@ -88,75 +88,39 @@ namespace MCEC{
 
       while(ReadRight() <= rSpeed || ReadLeft() <= lSpeed) { }
   }
-  void Drivetrain::Stop(){
+  void Drivetrain::Stop(vex::brakeType br){
       curPowerL = 0;
       curPowerR = 0;
 
-      rightMotors.stop(vex::brakeType::brake);
-
-      leftMotors.stop(vex::brakeType::brake);
+      rightMotors.Stop(br);
+      leftMotors.Stop(br);
   }
   float Drivetrain::ReadLeft(){
-    return leftMotors.position(vex::degrees);
+    return leftMotors.Position(vex::rotationUnits::rev);
   }
   float Drivetrain::ReadRight(){
-    return rightMotors.position(vex::degrees);
+    return rightMotors.Position(vex::rotationUnits::rev);
   }
 
   void Drivetrain::SetSpeed(float speed, vex::percentUnits units){
-    rightMotors.setVelocity(speed, units);
-    leftMotors.setVelocity(speed, units);
+    // rightMotors.setVelocity(speed, units);
+    // leftMotors.setVelocity(speed, units);
+      leftMotors.SetVelocity(speed, units);
+      rightMotors.SetVelocity(speed, units);
   }
 
   void Drivetrain::ResetPositions(){
-    leftMotors.resetPosition();
-    rightMotors.resetPosition();
+    leftMotors.ResetPosition();
+    rightMotors.ResetPosition();
   }
 
   void Drivetrain::SpinR(float revs){
-    rightMotors.spin(vex::forward, revs, vex::rpm);
+    rightMotors.Spin(vex::forward, revs, vex::rpm);
   }
   void Drivetrain::SpinL(float revs){
-    leftMotors.spin(vex::reverse, revs, vex::rpm);
+    leftMotors.Spin(vex::reverse, revs, vex::rpm);
   }
 //
-
-// Drivetrain6
-void Drivetrain6::ApplyPower(int lPow, int rPow){
-    curPowerL = MCEC::Lerp(curPowerL, lPow, 0.05f);
-    curPowerR = MCEC::Lerp(curPowerR, rPow, 0.025f);
-
-    _mR1.spin(vex::forward, curPowerR, vex::rpm);
-    _mR2.spin(vex::forward, curPowerR, vex::rpm);
-    _mR3.spin(vex::forward, curPowerR, vex::rpm);
-
-    _mL1.spin(vex::reverse, curPowerL, vex::rpm);
-    _mL2.spin(vex::reverse, curPowerL, vex::rpm);
-    _mL3.spin(vex::reverse, curPowerL, vex::rpm);
-}
-
-void Drivetrain6::Reset(){
-  _mR1.resetPosition();
-  _mR2.resetPosition();
-  _mR3.resetPosition();
-
-  _mL1.resetPosition();
-  _mL2.resetPosition();
-  _mL3.resetPosition();
-}
-
-void Drivetrain6::Stop(vex::brakeType br = vex::brakeType::brake){
-    curPowerL = 0;
-    curPowerR = 0;
-
-    _mR1.stop(br);
-    _mR2.stop(br);
-    _mR3.stop(br);
-
-    _mL1.stop(br);
-    _mL2.stop(br);
-    _mL3.stop(br);
-}
 
 
 void Controller::Set(){

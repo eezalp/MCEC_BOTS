@@ -48,7 +48,7 @@
 |       Down: None               B:None                          |
 ----------------------------------------------------------------*/
 
-#include <MCEC_Objects.h>
+#include "MCEC_Objects.h"
 #include <cmath>
 
 #define TURRET_MAX_ANGLE 23
@@ -59,6 +59,8 @@ vex::competition comp;
 vex::brain Brain;
 
 vex::optical ballOptical = vex::optical(vex::PORT18);
+
+
 
 MCEC::Drivetrain8 drivetrain(
     vex::PORT1, vex::PORT2, vex::PORT3, vex::PORT4, 
@@ -181,6 +183,7 @@ void IntakeGo(bool gatePos = false){
 
     turretRoller.spin(vex::forward, 300, vex::rpm);
 
+    
     sorterMotor.spin(vex::forward, 300, vex::rpm);
 
     frontGate.set(gatePos);
@@ -230,15 +233,37 @@ void FrontExit(){
 }
 
 void DriverLoop(){
-    controls.Set();
-    if(controls.lStick.isMoved() || controls.rStick.isMoved()){
-        drivetrain.Drive(-controls.lStick.y, (ABS(controls.rStick.x) > 30) ? controls.rStick.x : controls.lStick.x);
-    }else{
-        drivetrain.Stop(vex::brakeType::coast);
-    }
+    // if(!inertial.isCalibrating()){
+        controls.Set();
+        if(controls.lStick.isMoved() || controls.rStick.isMoved()){
+            drivetrain.Drive(-controls.lStick.y, (ABS(controls.rStick.x) > 30) ? controls.rStick.x : controls.lStick.x);
+        }else{
+            drivetrain.Stop();
+        }
 
-    ColorRead();
-    drivetrain.UpdateHeading();
+        // if(controls.r2Down){ // Intake in
+        //     Store();
+        //     isIntake = true;
+        // }else if(controls.l2Down){ // Intake out
+        //     FrontExit();
+        //     isIntake = false;
+        // }else if(controls.r1Down){
+        //     Shoot();
+        //     isIntake = false;
+        // }else if(controls.l1Down){
+        //     BackExit();
+        //     isIntake = false;
+        // }else if(!controls.r2Down && !controls.r1Down && !controls.l2Down && !controls.l1Down){
+        //     IntakeStop();
+        //     isIntake = false;
+        // }
+
+        ColorRead();
+        drivetrain.UpdateHeading();
+
+        // TurretUpdate();
+    // }
+    // vex::this_thread::sleep_for(10);
 }
 
 void Driver(){
@@ -258,7 +283,7 @@ void Auton(){
 
   vex::this_thread::sleep_for(600);
 
-  drivetrain.Rotate(90);
+  drivetrain.Rotate2(90);
 
   vex::this_thread::sleep_for(600);
 
@@ -266,13 +291,17 @@ void Auton(){
 
   vex::this_thread::sleep_for(600);
 
-  drivetrain.Rotate(-95);
-
-  vex::this_thread::sleep_for(400);
+  drivetrain.Rotate2(-95);
 
   drivetrain.Spin((5 * (5.0f / 3.0f)) / wheelCirc);
 
   vex::this_thread::sleep_for(600);
+
+//   drivetrain.DriveDist(2.35, 2.35, .2f);
+
+//   drivetrain.Rotate(270);
+
+  vex::this_thread::sleep_for(300);
   
   Shoot();
 
