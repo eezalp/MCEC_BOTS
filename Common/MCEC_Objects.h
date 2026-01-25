@@ -83,7 +83,7 @@ namespace MCEC{
           // @param joyY: input from -100 to 100
           void ApplyPower(int lPow, int rPow);
           void Drive(int joyX, int joyY);
-          void Rotate(float rotation);
+          void Rotate(float rotation, float power = 60);
           void DriveDist(float dL, float dR, int sec);
           void UpdateHeading();
           void SetInertial(vex::inertial* _inertial);

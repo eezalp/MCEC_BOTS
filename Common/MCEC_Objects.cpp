@@ -55,12 +55,12 @@ namespace MCEC{
       lastR = curR;
       lastL = curL;
   }
-  void Drivetrain::Rotate(float targ){
+  void Drivetrain::Rotate(float targ, float power){
       float tVal = (targ / 2) * wheelDist;
       float rInit = ReadRight(), lInit = ReadLeft();
 
-      SpinR((targ < 0) ? -60 : 60);
-      SpinL((targ < 0) ? 60 : -60);
+      SpinR((targ < 0) ? -power : power);
+      SpinL((targ < 0) ? power : -power);
 
       while(ABS(ReadRight() - rInit) < ABS(tVal) || ABS(ReadLeft() - lInit) < ABS(tVal)){ }
 
@@ -69,7 +69,7 @@ namespace MCEC{
   void Drivetrain::ApplyPower(int lPow, int rPow){
       curPowerL = Lerp(curPowerL, lPow, 0.1f);
       curPowerR = Lerp(curPowerR, rPow, 0.1f);
-      leftMotors.Spin(vex::reverse, curPowerR, vex::rpm);
+      leftMotors.Spin(vex::reverse, curPowerL, vex::rpm);
       rightMotors.Spin(vex::forward, curPowerR, vex::rpm);
   }
   void Drivetrain::Spin(float revs){

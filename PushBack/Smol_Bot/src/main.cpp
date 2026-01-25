@@ -49,6 +49,9 @@
 #include "MCEC_Objects.h"
 #include <cmath>
 
+#define TURN_ONLY_MULTI 0.4f
+#define DRIVE_MULTI  0.75f
+
 vex::brain Brain;
 vex::controller controller = vex::controller();
 vex::competition comp = vex::competition();
@@ -91,7 +94,11 @@ void DriverLoop(){
   controls.Set();
 
   if(controls.lStick.isMoved() || controls.rStick.isMoved()){
-    drivetrain.Drive(controls.lStick.y, controls.rStick.x);
+    if(controls.lStick.y < 10){
+      drivetrain.Drive(0, controls.rStick.x * TURN_ONLY_MULTI);
+    }else{
+      drivetrain.Drive(controls.lStick.y * DRIVE_MULTI, controls.rStick.x * DRIVE_MULTI);
+    }
     // drivetrain.rightMotors.spin(vex::forward);
     // drivetrain.leftMotors.spin(vex::forward);
   }else{
