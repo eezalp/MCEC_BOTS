@@ -51,26 +51,20 @@
 
 #define TURN_ONLY_MULTI 0.4f
 #define DRIVE_MULTI  0.75f
+#define LEFT_MULTI   1.0f
+#define RIGHT_MULTI  1.0f
 
 vex::brain Brain;
 vex::controller controller = vex::controller();
 vex::competition comp = vex::competition();
-vex::inertial inertial = vex::inertial(vex::PORT6);
+vex::inertial inertial = vex::inertial(vex::PORT2);
 
 vex::motor crabLeft  = vex::motor(vex::PORT20);
-vex::motor crabRight = vex::motor(vex::PORT10);
-
-vex::motor a = vex::motor(vex::PORT1);
-vex::motor b = vex::motor(vex::PORT2);
-vex::motor c = vex::motor(vex::PORT3);
-
-vex::motor d = vex::motor(vex::PORT4);
-vex::motor e = vex::motor(vex::PORT7);
-vex::motor f = vex::motor(vex::PORT8);
+vex::motor crabRight = vex::motor(vex::PORT19);
 
 MCEC::Drivetrain6 drivetrain(
-  vex::PORT1, vex::PORT2, vex::PORT3, 
-  vex::PORT4, vex::PORT7, vex::PORT8
+  vex::PORT11, vex::PORT12, vex::PORT13, //Right
+  vex::PORT15, vex::PORT16, vex::PORT17  //Left
 );
 
 MCEC::Controller controls;
@@ -94,8 +88,8 @@ void DriverLoop(){
   controls.Set();
 
   if(controls.lStick.isMoved() || controls.rStick.isMoved()){
-    if(controls.lStick.y < 10){
-      drivetrain.Drive(0, controls.rStick.x * TURN_ONLY_MULTI);
+    if(abs(controls.lStick.y) < 10){
+      drivetrain.Drive(0, controls.rStick.x * TURN_ONLY_MULTI * RIGHT_MULTI);
     }else{
       drivetrain.Drive(controls.lStick.y * DRIVE_MULTI, controls.rStick.x * DRIVE_MULTI);
     }
@@ -175,6 +169,8 @@ int main(){
 
   SetControls();
 
+
+
   // drivetrain.rightMotors = vex::motor_group(d, e, f);
   // drivetrain.leftMotors = vex::motor_group(a, b, c);
   // drivetrain.Init();
@@ -184,6 +180,8 @@ int main(){
   drivetrain.ResetPositions();
   drivetrain.wheelRadius = 3.25f / 2;
   drivetrain.wheelDistance = 12.0f;
+  drivetrain.leftMulti = LEFT_MULTI;
+  drivetrain.rightMulti = RIGHT_MULTI;
 
   while(1) {
     if(!comp.isFieldControl()){

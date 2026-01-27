@@ -37,7 +37,7 @@ namespace MCEC{
     Rpower = (xPower - yPower);    // balls
 
     // Apply the power to the motors
-    ApplyPower(Lpower, Rpower);
+    ApplyPower(Lpower * leftMulti, Rpower * rightMulti);
 }
   void Drivetrain::SetInertial(vex::inertial* _inertial){
     inertial = _inertial;

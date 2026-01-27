@@ -69,9 +69,11 @@ namespace MCEC{
     class Drivetrain{
       public:
       Drivetrain(){}
-    //   Drivetrain(vex::motor_group& _mgR, vex::motor_group& _mgL) : leftMotors(_mgL), rightMotors(_mgR) {}
+    
         MotorGroup leftMotors;
         MotorGroup rightMotors;
+        float leftMulti = 1;
+        float rightMulti = 1;
         // std::list<vex::motor> leftMotors;
         // std::list<vex::motor> rightMotors;
 
