@@ -67,8 +67,8 @@ namespace MCEC{
       Stop();
   }
   void Drivetrain::ApplyPower(int lPow, int rPow){
-      curPowerL = Lerp(curPowerL, lPow, 0.1f);
-      curPowerR = Lerp(curPowerR, rPow, 0.1f);
+      curPowerL = (curPowerL > lPow) ? Lerp(curPowerL, lPow, 0.075f) : lPow;
+      curPowerR = (curPowerR > rPow) ? Lerp(curPowerR, rPow, 0.075f) : rPow;
       leftMotors.Spin(vex::reverse, curPowerL, vex::rpm);
       rightMotors.Spin(vex::forward, curPowerR, vex::rpm);
   }

@@ -50,7 +50,7 @@
 #include <cmath>
 
 #define TURN_ONLY_MULTI 0.4f
-#define DRIVE_MULTI  0.75f
+#define DRIVE_MULTI  1.0f
 #define LEFT_MULTI   1.0f
 #define RIGHT_MULTI  1.0f
 
@@ -63,7 +63,7 @@ vex::motor crabLeft  = vex::motor(vex::PORT20);
 vex::motor crabRight = vex::motor(vex::PORT19);
 
 MCEC::Drivetrain6 drivetrain(
-  vex::PORT11, vex::PORT12, vex::PORT13, //Right
+  vex::PORT14, vex::PORT13, vex::PORT18, //Right
   vex::PORT15, vex::PORT16, vex::PORT17  //Left
 );
 
@@ -89,14 +89,16 @@ void DriverLoop(){
 
   if(controls.lStick.isMoved() || controls.rStick.isMoved()){
     if(abs(controls.lStick.y) < 10){
-      drivetrain.Drive(0, controls.rStick.x * TURN_ONLY_MULTI * RIGHT_MULTI);
+      drivetrain.Drive(0, controls.rStick.x * TURN_ONLY_MULTI);
+    }else if(abs(controls.rStick.x) < 10){
+      drivetrain.Drive(controls.lStick.y * DRIVE_MULTI, 0);
     }else{
       drivetrain.Drive(controls.lStick.y * DRIVE_MULTI, controls.rStick.x * DRIVE_MULTI);
     }
     // drivetrain.rightMotors.spin(vex::forward);
     // drivetrain.leftMotors.spin(vex::forward);
   }else{
-    drivetrain.Stop(vex::brakeType::brake);
+    drivetrain.Stop(vex::brakeType::coast);
   }
     Brain.Screen.setCursor(1, 1);
     Brain.Screen.print("%f", drivetrain.curPowerL);
@@ -126,7 +128,7 @@ void Auton(){
 
   vex::this_thread::sleep_for(400);
 
-  // IntakeGo();
+  IntakeGo();
 
   vex::this_thread::sleep_for(3000);
 
@@ -136,7 +138,7 @@ void Auton(){
 
   drivetrain.Spin((-24 * (3.0f / 5.0f)) / wheelCirc);
 
-  IntakeGo();
+  // IntakeGo();
 
   vex::this_thread::sleep_for(3000);
 

@@ -266,17 +266,43 @@ void Auton(){
 
   vex::this_thread::sleep_for(600);
 
-  drivetrain.Rotate(-95);
+  drivetrain.Rotate(90);
 
   vex::this_thread::sleep_for(400);
 
-  drivetrain.Spin((5 * (5.0f / 3.0f)) / wheelCirc);
+  drivetrain.Spin((12 * (5.0f / 3.0f)) / wheelCirc);
+
+  vex::this_thread::sleep_for(600);
+
+  drivetrain.Spin((-1 * (5.0f / 3.0f)) / wheelCirc);
 
   vex::this_thread::sleep_for(600);
   
-  Shoot();
+  Store();
 
   vex::this_thread::sleep_for(3000);
+
+  IntakeStop();
+
+  vex::this_thread::sleep_for(600);
+
+  drivetrain.Spin((-5 * (5.0f / 3.0f)) / wheelCirc);
+
+  vex::this_thread::sleep_for(600);
+
+  drivetrain.Rotate(180);
+
+  vex::this_thread::sleep_for(600);
+
+  drivetrain.Spin((6 * (5.0f / 3.0f)) / wheelCirc);
+
+  vex::this_thread::sleep_for(600);
+
+  Shoot();
+
+  while(comp.isAutonomous()){
+
+  }
 
   IntakeStop();
 }
