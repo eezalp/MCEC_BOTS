@@ -14,10 +14,13 @@
 #define ABS(num) ((num < 0) ? (num * -1) : num)
 
 typedef std::function<void()> ButtonCB;
-
+//
+//(14.5f + 9)
 static const float wheelRad = 3.25f / 2;
-static const float wheelDist = (14.5f + 9) / 2;
+static const float wheelDist = (10.0f + (5.0f/16.0f) + (12.5f) + (5.0f/16.0f)) / 2;
 static const float wheelCirc = 2 * wheelRad * M_PI;
+
+float abs2(float n);
 
 namespace MCEC{
     class MotorGroup{
@@ -37,7 +40,7 @@ namespace MCEC{
                     motor.spin(dir, vel, velUnits);
                 }
             }
-            int Position(vex::rotationUnits units){
+            float Position(vex::rotationUnits units){
                 float pos = 0;
                 for (auto motor : groupList){
                     pos += motor.position(units);
@@ -74,8 +77,6 @@ namespace MCEC{
         MotorGroup rightMotors;
         float leftMulti = 1;
         float rightMulti = 1;
-        // std::list<vex::motor> leftMotors;
-        // std::list<vex::motor> rightMotors;
 
           float curPowerR, curPowerL, _heading;
           float wheelRadius = wheelRad, wheelDistance = wheelDist;
@@ -86,7 +87,8 @@ namespace MCEC{
           void ApplyPower(int lPow, int rPow);
           void Drive(int joyX, int joyY);
           void Rotate(float rotation, float power = 60);
-          void DriveDist(float dL, float dR, int sec);
+          void DriveDist(float d, float sec);
+          void DriveDist(float dL, float dR, float sec);
           void UpdateHeading();
           void SetInertial(vex::inertial* _inertial);
           void Stop(vex::brakeType br = vex::brakeType::brake);
@@ -100,7 +102,7 @@ namespace MCEC{
           void SpinToL(float);
           void ResetPositions();
           void SetSpeed(float speed = 50, vex::percentUnits units = vex::percentUnits::pct);
-          void Spin(float revs);
+          void Spin(float revs, float power = 60);
       private:
           vex::inertial* inertial;
     };
@@ -118,19 +120,6 @@ namespace MCEC{
             {
                 leftMotors = MotorGroup({_mL1, _mL2, _mL3, _mL4});
                 rightMotors = MotorGroup({_mR1, _mR2, _mR3, _mR4});
-            // leftMotors.push_back(_mL1);
-            // leftMotors.push_back(_mL2);
-            // leftMotors.push_back(_mL3);
-            // leftMotors.push_back(_mL4);
-
-            // rightMotors.push_back(_mR1);
-            // rightMotors.push_back(_mR2);
-            // rightMotors.push_back(_mR3);
-            // rightMotors.push_back(_mR4);
-            }
-            void Init(){
-                // leftMotors = vex::motor_group(_mL1, _mL2, _mL3, _mL4);
-                // rightMotors = vex::motor_group(_mR1, _mR2, _mR3, _mR4);
             }
         private:
             vex::motor _mR1, _mR2, _mR3, _mR4;
@@ -146,17 +135,9 @@ namespace MCEC{
             ) :
             _mR1(portR1, vex::ratio6_1), _mR2(portR2, vex::ratio6_1), _mR3(portR3, vex::ratio6_1),
             _mL1(portL1, vex::ratio6_1), _mL2(portL2, vex::ratio6_1), _mL3(portL3, vex::ratio6_1)
-            // left(_mL1, _mL2, _mL3), right(_mR1, _mR2, _mR3),
-            // Drivetrain(left, right)
             {
                 leftMotors = MotorGroup({_mL1, _mL2, _mL3});
                 rightMotors = MotorGroup({_mR1, _mR2, _mR3});
-            // leftMotors = vex::motor_group(_mL1, _mL2, _mL3);
-            // rightMotors = vex::motor_group(_mR1, _mR2, _mR3);
-            }
-            void Init(){
-                // leftMotors = vex::motor_group(_mL1, _mL2, _mL3);
-                // rightMotors = vex::motor_group(_mR1, _mR2, _mR3);
             }
         private:
             vex::motor _mR1, _mR2, _mR3;

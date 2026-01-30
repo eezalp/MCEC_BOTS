@@ -51,8 +51,10 @@
 
 #define TURN_ONLY_MULTI 0.4f
 #define DRIVE_MULTI  1.0f
-#define LEFT_MULTI   1.0f
-#define RIGHT_MULTI  1.0f
+#define LEFT_MULTI   0.5f
+#define RIGHT_MULTI  0.5f
+#define LEFT_TURBO   1.0f
+#define RIGHT_TURBO  1.0f
 
 vex::brain Brain;
 vex::controller controller = vex::controller();
@@ -95,15 +97,13 @@ void DriverLoop(){
     }else{
       drivetrain.Drive(controls.lStick.y * DRIVE_MULTI, controls.rStick.x * DRIVE_MULTI);
     }
-    // drivetrain.rightMotors.spin(vex::forward);
-    // drivetrain.leftMotors.spin(vex::forward);
   }else{
     drivetrain.Stop(vex::brakeType::coast);
   }
-    Brain.Screen.setCursor(1, 1);
-    Brain.Screen.print("%f", drivetrain.curPowerL);
-    Brain.Screen.setCursor(2, 1);
-    Brain.Screen.print("%f", drivetrain.curPowerR);
+  Brain.Screen.setCursor(1, 1);
+  Brain.Screen.print("%f", drivetrain.curPowerL);
+  Brain.Screen.setCursor(2, 1);
+  Brain.Screen.print("%f", drivetrain.curPowerR);
 }
 
 void Drive(){
@@ -145,12 +145,23 @@ void Auton(){
   IntakeStop();
 }
 
+void Turbo(){
+  drivetrain.leftMulti = LEFT_TURBO;
+  drivetrain.rightMulti = RIGHT_TURBO;
+}
+void TurboOff(){
+  drivetrain.leftMulti = LEFT_MULTI;
+  drivetrain.rightMulti = RIGHT_MULTI;
+}
+
 void SetControls(){
   controls.R2.SetOnPress(IntakeGo);
   controls.L2.SetOnPress(IntakeNotGo);
+  controls.L1.SetOnPress(Turbo);
 
   controls.R2.SetOnRelease(IntakeStop);
   controls.L2.SetOnRelease(IntakeStop);
+  controls.L1.SetOnRelease(TurboOff);
 
   
   if(!comp.isFieldControl()){

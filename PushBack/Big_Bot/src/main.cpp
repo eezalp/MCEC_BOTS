@@ -172,6 +172,12 @@ void ColorRead(){
     }
 }
 
+float AngleDiff(float a_1, float a_2){
+    float a1 = a_1 * (M_PI/180.0f);
+    float a2 = a_2 * (M_PI/180.0f);
+    return std::atan2(std::sin(a2 - a1), std::cos(a2 - a1)) * (180.0f/M_PI);
+}
+
 
 //@param gatePos: false = open, true = closed
 void IntakeGo(bool gatePos = false){
@@ -250,25 +256,25 @@ void Driver(){
 }
 
 void Auton(){
-  drivetrain.SetSpeed(35, vex::percentUnits::pct);
+  drivetrain.SetSpeed(60, vex::percentUnits::pct);
 
   RaiseTurretPnu();
 
-  drivetrain.Spin((24 * (5.0f / 3.0f)) / wheelCirc);
+  drivetrain.Spin((20 * (5.0f / 3.0f)) / wheelCirc, 100);
 
-  vex::this_thread::sleep_for(600);
+  vex::this_thread::sleep_for(10);
 
-  drivetrain.Rotate(90);
+  drivetrain.Rotate(90, 160);
+//   return;
 
-  vex::this_thread::sleep_for(600);
+  vex::this_thread::sleep_for(10);
 
-  drivetrain.Spin((32 * (5.0f / 3.0f)) / wheelCirc);
+  drivetrain.Spin((28 * (5.0f / 3.0f)) / wheelCirc, 100);
 
-  vex::this_thread::sleep_for(600);
+  vex::this_thread::sleep_for(10);
 
-  drivetrain.Rotate(90);
-
-  vex::this_thread::sleep_for(400);
+  drivetrain.Rotate(90, 100);
+  return;
 
   drivetrain.Spin((12 * (5.0f / 3.0f)) / wheelCirc);
 
@@ -342,6 +348,7 @@ int main(){
     sorterDoor.resetPosition();
 
     drivetrain.SetInertial(&inertial);
+    drivetrain.wheelDistance = wheelDist;
 
     SetControls();
 
@@ -361,3 +368,68 @@ int main(){
         vex::this_thread::sleep_for(10);
     }
 }
+  void MCEC::Drivetrain::Rotate(float targ, float power){
+      float tVal = (targ * (M_PI/180.0f)) * (3.0f/5.0f) * wheelDistance / wheelCirc;
+      float rInit = ReadRight(), lInit = ReadLeft();
+      float inertialInitial = inertial->heading();
+
+      SpinR((targ < 0) ? -power : power);
+      SpinL((targ < 0) ? power : -power);
+        controls.controller.Screen.clearScreen();
+        controls.controller.Screen.setCursor(1, 13);
+        controls.controller.Screen.print(inertialInitial);
+        controls.controller.Screen.setCursor(2, 13);
+        controls.controller.Screen.print(abs2(inertialInitial - inertial->heading()));
+        controls.controller.Screen.setCursor(3, 13);
+        controls.controller.Screen.print(abs2(targ));
+
+      while(
+        (abs2(ReadRight() - rInit) < abs2(tVal) || abs2(ReadLeft() - lInit) < abs2(tVal)) &&
+        (AngleDiff(inertialInitial, inertial->heading()) < abs2(targ))
+    ){
+        // controls.controller.Screen.setCursor(1, 7);
+        // controls.controller.Screen.print(ReadRight());
+        // controls.controller.Screen.setCursor(2, 7);
+        // controls.controller.Screen.print(ReadLeft());
+        controls.controller.Screen.setCursor(2, 13);
+        controls.controller.Screen.print(AngleDiff(inertialInitial, inertial->heading()));
+      }
+
+        controls.controller.Screen.setCursor(2, 13);
+        controls.controller.Screen.print(AngleDiff(inertialInitial, inertial->heading()));
+      Stop();
+      inertial->setHeading(0, vex::degrees);
+        controls.controller.Screen.setCursor(1, 7);
+        controls.controller.Screen.print(AngleDiff(inertialInitial, inertial->heading()));
+        // controls.controller.Screen.setCursor(2, 7);
+        // controls.controller.Screen.print(ReadLeft());
+  }
+  void MCEC::Drivetrain::Spin(float revs, float power){
+    float rInit = ReadRight(), lInit = ReadLeft();
+    SpinR((revs < 0) ? power : -power);
+    SpinL((revs < 0) ? power : -power);
+    // leftMotors.SpinTo(revs, vex::rotationUnits::rev, false);
+    // rightMotors.SpinTo(revs, vex::rotationUnits::rev, true);
+    controls.controller.Screen.clearScreen();
+    controls.controller.Screen.setCursor(1, 7);
+    controls.controller.Screen.print(rInit);
+    controls.controller.Screen.setCursor(2, 7);
+    controls.controller.Screen.print(lInit);
+    controls.controller.Screen.setCursor(3, 1);
+    controls.controller.Screen.print(ABS(revs));
+      while(abs2(ReadRight() - rInit) < abs2(revs) || abs2(ReadLeft() - lInit) < abs2(revs)){
+        controls.controller.Screen.setCursor(1, 13);
+        controls.controller.Screen.print(abs2(ReadRight() - rInit));
+        controls.controller.Screen.setCursor(2, 13);
+        controls.controller.Screen.print(abs2(ReadLeft() - lInit));
+      }
+
+    //   Stop();
+
+    controls.controller.Screen.setCursor(1, 1);
+    controls.controller.Screen.print(ReadRight());
+    controls.controller.Screen.setCursor(2, 1);
+    controls.controller.Screen.print(ReadLeft());
+    controls.controller.Screen.setCursor(3, 7);
+    controls.controller.Screen.print(revs);
+  }

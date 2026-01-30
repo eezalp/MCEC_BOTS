@@ -3,6 +3,11 @@
 float MCEC::Lerp(float a, float b, float t){
     return ((1 - t) * a) + (b * t);
 }
+float abs2(float n){
+    if(n < 0) return n * -1;
+    return n;
+}
+
 namespace MCEC{
 
 // Drivetrain
@@ -55,30 +60,26 @@ namespace MCEC{
       lastR = curR;
       lastL = curL;
   }
-  void Drivetrain::Rotate(float targ, float power){
-      float tVal = (targ / 2) * wheelDist;
-      float rInit = ReadRight(), lInit = ReadLeft();
-
-      SpinR((targ < 0) ? -power : power);
-      SpinL((targ < 0) ? power : -power);
-
-      while(ABS(ReadRight() - rInit) < ABS(tVal) || ABS(ReadLeft() - lInit) < ABS(tVal)){ }
-
-      Stop();
-  }
   void Drivetrain::ApplyPower(int lPow, int rPow){
       curPowerL = (curPowerL > lPow) ? Lerp(curPowerL, lPow, 0.075f) : lPow;
       curPowerR = (curPowerR > rPow) ? Lerp(curPowerR, rPow, 0.075f) : rPow;
       leftMotors.Spin(vex::reverse, curPowerL, vex::rpm);
       rightMotors.Spin(vex::forward, curPowerR, vex::rpm);
   }
-  void Drivetrain::Spin(float revs){
-    ResetPositions();
-      leftMotors.SpinTo(revs, vex::rotationUnits::rev, true);
-      rightMotors.SpinTo(-revs, vex::rotationUnits::rev, false);
+
+  void Drivetrain::DriveDist(float d, float sec){
+      float dd = d / wheelCirc;
+      float 
+          lSpeed = d / sec / 60 / wheelCirc, 
+          rSpeed = d / sec / 60 / wheelCirc;
+
+      SpinR(rSpeed);
+      SpinL(lSpeed);
+
+      while(ABS(ReadRight()) <= ABS(dd) || ABS(ReadLeft()) <= ABS(dd)) { }
   }
 
-  void Drivetrain::DriveDist(float dL, float dR, int sec){
+  void Drivetrain::DriveDist(float dL, float dR, float sec){
       float 
           lSpeed = dL / sec / 60 / wheelCirc, 
           rSpeed = dR / sec / 60 / wheelCirc;
@@ -103,8 +104,6 @@ namespace MCEC{
   }
 
   void Drivetrain::SetSpeed(float speed, vex::percentUnits units){
-    // rightMotors.setVelocity(speed, units);
-    // leftMotors.setVelocity(speed, units);
       leftMotors.SetVelocity(speed, units);
       rightMotors.SetVelocity(speed, units);
   }
