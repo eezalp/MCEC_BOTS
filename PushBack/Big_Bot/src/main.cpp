@@ -49,7 +49,6 @@
 ----------------------------------------------------------------*/
 
 #include <MCEC_Objects.h>
-#include <cmath>
 
 #define TURRET_MAX_ANGLE 23
 #define TURRET_MIN_ANGLE 11
@@ -101,18 +100,136 @@ TurretStates turretState = TurretStates::LowGoal;
 void LowerTurretPnu();
 void ShivUp();
 
+
+  void MCEC::Drivetrain::Rotate(float targ){
+      uint32_t startTime = Brain.Timer.system();
+      uint32_t lastTime = startTime;
+      uint32_t curTime;
+      float power = 0;
+      float dt = 0;
+
+      pid.Prime(_heading, targ);
+      controls.controller.Screen.clearScreen();
+      dt = (Brain.Timer.system() - lastTime) / 1000.0f;
+
+      while(!pid.AtTarget(_heading, dt)){
+        curTime = Brain.Timer.system();
+        dt = (curTime - lastTime) / 1000.0f;
+
+        UpdateHeading();
+        power = pid.Update(_heading, dt);
+
+        SpinR(-power);
+        SpinL(power);
+
+        controls.controller.Screen.setCursor(1, 1);
+        controls.controller.Screen.print("Power: %.2f    ", power);
+
+        lastTime = curTime;
+      }
+
+      Stop();
+  }
+  void MCEC::Drivetrain::Rotate(float targ, float power){
+      float tVal = (targ * (M_PI/180.0f)) * (3.0f/5.0f) * wheelDistance / wheelCirc;
+      float rInit = ReadRight(), lInit = ReadLeft();
+      float inertialInitial = inertial->heading();
+
+      SpinR((targ < 0) ? -power : power);
+      SpinL((targ < 0) ? power : -power);
+        controls.controller.Screen.clearScreen();
+        controls.controller.Screen.setCursor(1, 13);
+        controls.controller.Screen.print(inertialInitial);
+        controls.controller.Screen.setCursor(2, 13);
+        controls.controller.Screen.print(abs2(inertialInitial - inertial->heading()));
+        controls.controller.Screen.setCursor(3, 13);
+        controls.controller.Screen.print(abs2(targ));
+
+      while(
+        (abs2(ReadRight() - rInit) < abs2(tVal) || abs2(ReadLeft() - lInit) < abs2(tVal)) &&
+        (AngleDiff(inertialInitial, inertial->heading()) < abs2(targ))
+    ){
+        // controls.controller.Screen.setCursor(1, 7);
+        // controls.controller.Screen.print(ReadRight());
+        // controls.controller.Screen.setCursor(2, 7);
+        // controls.controller.Screen.print(ReadLeft());
+        controls.controller.Screen.setCursor(2, 13);
+        controls.controller.Screen.print(AngleDiff(inertialInitial, inertial->heading()));
+      }
+
+        controls.controller.Screen.setCursor(2, 13);
+        controls.controller.Screen.print(AngleDiff(inertialInitial, inertial->heading()));
+      Stop();
+      inertial->setHeading(0, vex::degrees);
+        controls.controller.Screen.setCursor(1, 7);
+        controls.controller.Screen.print(AngleDiff(inertialInitial, inertial->heading()));
+        // controls.controller.Screen.setCursor(2, 7);
+        // controls.controller.Screen.print(ReadLeft());
+  }
+  void MCEC::Drivetrain::Spin(float revs, float power){
+    float rInit = ReadRight(), lInit = ReadLeft();
+    float curPow = power;
+    // leftMotors.SpinTo(revs, vex::rotationUnits::rev, false);
+    // rightMotors.SpinTo(revs, vex::rotationUnits::rev, true);
+      while(abs2(ReadRight() - rInit) < abs2(revs) || abs2(ReadLeft() - lInit) < abs2(revs)){
+        // curPow = Lerp(curPow, power, 0.075f);
+        SpinR((revs < 0) ? curPow : -curPow);
+        SpinL((revs < 0) ? curPow : -curPow);
+        // vex::this_thread::sleep_for(10);
+      }
+
+    //   Stop();
+
+    // controls.controller.Screen.setCursor(1, 1);
+    // controls.controller.Screen.print(ReadRight());
+    // controls.controller.Screen.setCursor(2, 1);
+    // controls.controller.Screen.print(ReadLeft());
+    // controls.controller.Screen.setCursor(3, 7);
+    // controls.controller.Screen.print(revs);
+  }
+  void MCEC::Drivetrain::UpdateHeading(){
+      static float lastR = ReadRight(), lastL = ReadLeft();
+      static float prevHeading = inertial->heading();
+      float dMotor = 0;
+      float curR = ReadRight(), curL = ReadLeft();
+      float curHeading = inertial->heading();
+      float dHeading = AngleDiff(curHeading, prevHeading);
+
+      dMotor += (wheelCirc * ((curR - lastR) - (curL - lastL))) / wheelDist;
+      
+      _heading += dHeading * 1.0f + dMotor * 0.0f;
+      _heading = curHeading;
+    controls.controller.Screen.setCursor(2, 1);
+    controls.controller.Screen.print("Heading: %.2f    ", _heading);
+
+      lastR = curR;
+      lastL = curL;
+      prevHeading = curHeading;
+  }
+
 void RaiseTurretPnu(){
     turretPiston.set(false);
     controls.X.SetOnPress(LowerTurretPnu);
 }
 
+void SpinRight(){
+  drivetrain.SpinR(-100);
+  drivetrain.SpinL(100);
+  controls.controller.Screen.clearScreen();
+}
+
+void SpinLeft(){
+  drivetrain.SpinR(100);
+  drivetrain.SpinL(-100);
+}
+
 void ShivDown(){
-    shivPiston.set(false);
+    shivPiston.set(true);
     controls.Y.SetOnPress(ShivUp);
 }
 
 void ShivUp(){
-    shivPiston.set(true);
+    shivPiston.set(false);
     controls.Y.SetOnPress(ShivDown);
 }
 
@@ -172,11 +289,6 @@ void ColorRead(){
     }
 }
 
-float AngleDiff(float a_1, float a_2){
-    float a1 = a_1 * (M_PI/180.0f);
-    float a2 = a_2 * (M_PI/180.0f);
-    return std::atan2(std::sin(a2 - a1), std::cos(a2 - a1)) * (180.0f/M_PI);
-}
 
 
 //@param gatePos: false = open, true = closed
@@ -256,61 +368,95 @@ void Driver(){
 }
 
 void Auton(){
+  frontGate.set(true);
+  drivetrain.inertial->setHeading(0, vex::degrees);
   drivetrain.SetSpeed(60, vex::percentUnits::pct);
 
   RaiseTurretPnu();
 
-  drivetrain.Spin((20 * (5.0f / 3.0f)) / wheelCirc, 100);
+  drivetrain.Spin((12 * (5.0f / 3.0f)) / wheelCirc, 100);
+//   drivetrain.Stop(vex::brakeType::hold);
 
-  vex::this_thread::sleep_for(10);
+  vex::this_thread::sleep_for(100);
 
-  drivetrain.Rotate(90, 160);
+  drivetrain.Rotate(90); // 90
+  drivetrain.Stop(vex::brakeType::hold);
 //   return;
 
-  vex::this_thread::sleep_for(10);
+  vex::this_thread::sleep_for(100);
 
-  drivetrain.Spin((28 * (5.0f / 3.0f)) / wheelCirc, 100);
+  drivetrain.Spin((30 * (5.0f / 3.0f)) / wheelCirc, 100);
+  drivetrain.Stop(vex::brakeType::hold);
 
-  vex::this_thread::sleep_for(10);
-
-  drivetrain.Rotate(90, 100);
-  return;
-
-  drivetrain.Spin((12 * (5.0f / 3.0f)) / wheelCirc);
-
-  vex::this_thread::sleep_for(600);
-
-  drivetrain.Spin((-1 * (5.0f / 3.0f)) / wheelCirc);
-
-  vex::this_thread::sleep_for(600);
-  
-  Store();
-
-  vex::this_thread::sleep_for(3000);
-
-  IntakeStop();
-
-  vex::this_thread::sleep_for(600);
-
-  drivetrain.Spin((-5 * (5.0f / 3.0f)) / wheelCirc);
-
-  vex::this_thread::sleep_for(600);
+  vex::this_thread::sleep_for(100);
 
   drivetrain.Rotate(180);
+  drivetrain.Stop(vex::brakeType::hold);
+  vex::this_thread::sleep_for(100);
 
-  vex::this_thread::sleep_for(600);
+//   Store();
+//   vex::this_thread::sleep_for(2000);
+//   IntakeStop();
+  frontGate.set(true);
 
-  drivetrain.Spin((6 * (5.0f / 3.0f)) / wheelCirc);
+  ShivDown();
 
-  vex::this_thread::sleep_for(600);
+  // drivetrain.Spin((13 * (5.0f / 3.0f)) / wheelCirc, 200);
+  drivetrain.SpinL(-100);
+  drivetrain.SpinR(-100);
+  vex::this_thread::sleep_for(1500);
+  drivetrain.Stop(vex::brakeType::hold);
 
+  vex::this_thread::sleep_for(100);
+  // drivetrain.Stop();
+
+  Store();
+  for(uint8_t i = 0; i < 70; i++){
+    // drivetrain.SpinL(10);
+    // drivetrain.SpinR(-10);
+    // drivetrain.Stop();
+    vex::this_thread::sleep_for(30);
+    // drivetrain.SpinL(-10);
+    // drivetrain.SpinR(10);
+    // drivetrain.Stop();
+    vex::this_thread::sleep_for(30);
+  }
+
+  drivetrain.Stop();
+  IntakeStop();
+//   return;
+
+  drivetrain.Spin((-3 * (5.0f / 3.0f)) / wheelCirc);
+  drivetrain.Stop(vex::brakeType::hold);
+  vex::this_thread::sleep_for(100);
+  
+  ShivUp();
+//   return;
+
+  drivetrain.Rotate(359.0f);
+  drivetrain.Stop(vex::brakeType::hold);
+  vex::this_thread::sleep_for(100);
+
+  drivetrain.SpinL(-100);
+  drivetrain.SpinR(-100);
+  vex::this_thread::sleep_for(3000);
+  drivetrain.Stop(vex::brakeType::hold);
+  vex::this_thread::sleep_for(100);
+
+  drivetrain.Stop();
   Shoot();
+
+  vex::this_thread::sleep_for(600);
 
   while(comp.isAutonomous()){
 
   }
 
   IntakeStop();
+}
+
+void StopMoving(){
+  drivetrain.Stop();
 }
 
 void SetControls(){
@@ -321,11 +467,16 @@ void SetControls(){
     controls.R2.SetOnPress(Store);
     controls.L1.SetOnPress(BackExit);
     controls.L2.SetOnPress(FrontExit);
+
+    controls.A.SetOnPress(SpinLeft);
+    controls.B.SetOnPress(SpinRight);
     
     controls.R1.SetOnRelease(IntakeStop);
     controls.R2.SetOnRelease(IntakeStop);
     controls.L1.SetOnRelease(IntakeStop);
     controls.L2.SetOnRelease(IntakeStop);
+    controls.B.SetOnRelease(StopMoving);
+    controls.A.SetOnRelease(StopMoving);
     
 
     if(!comp.isFieldControl()){
@@ -349,6 +500,8 @@ int main(){
 
     drivetrain.SetInertial(&inertial);
     drivetrain.wheelDistance = wheelDist;
+    // drivetrain.pid.SetVariables(2.5f, 0.01f, 0.22f); //P I D
+    drivetrain.pid.SetVariables(2.5f, 0.0009f, 0.15f); //P I D
 
     SetControls();
 
@@ -368,68 +521,3 @@ int main(){
         vex::this_thread::sleep_for(10);
     }
 }
-  void MCEC::Drivetrain::Rotate(float targ, float power){
-      float tVal = (targ * (M_PI/180.0f)) * (3.0f/5.0f) * wheelDistance / wheelCirc;
-      float rInit = ReadRight(), lInit = ReadLeft();
-      float inertialInitial = inertial->heading();
-
-      SpinR((targ < 0) ? -power : power);
-      SpinL((targ < 0) ? power : -power);
-        controls.controller.Screen.clearScreen();
-        controls.controller.Screen.setCursor(1, 13);
-        controls.controller.Screen.print(inertialInitial);
-        controls.controller.Screen.setCursor(2, 13);
-        controls.controller.Screen.print(abs2(inertialInitial - inertial->heading()));
-        controls.controller.Screen.setCursor(3, 13);
-        controls.controller.Screen.print(abs2(targ));
-
-      while(
-        (abs2(ReadRight() - rInit) < abs2(tVal) || abs2(ReadLeft() - lInit) < abs2(tVal)) &&
-        (AngleDiff(inertialInitial, inertial->heading()) < abs2(targ))
-    ){
-        // controls.controller.Screen.setCursor(1, 7);
-        // controls.controller.Screen.print(ReadRight());
-        // controls.controller.Screen.setCursor(2, 7);
-        // controls.controller.Screen.print(ReadLeft());
-        controls.controller.Screen.setCursor(2, 13);
-        controls.controller.Screen.print(AngleDiff(inertialInitial, inertial->heading()));
-      }
-
-        controls.controller.Screen.setCursor(2, 13);
-        controls.controller.Screen.print(AngleDiff(inertialInitial, inertial->heading()));
-      Stop();
-      inertial->setHeading(0, vex::degrees);
-        controls.controller.Screen.setCursor(1, 7);
-        controls.controller.Screen.print(AngleDiff(inertialInitial, inertial->heading()));
-        // controls.controller.Screen.setCursor(2, 7);
-        // controls.controller.Screen.print(ReadLeft());
-  }
-  void MCEC::Drivetrain::Spin(float revs, float power){
-    float rInit = ReadRight(), lInit = ReadLeft();
-    SpinR((revs < 0) ? power : -power);
-    SpinL((revs < 0) ? power : -power);
-    // leftMotors.SpinTo(revs, vex::rotationUnits::rev, false);
-    // rightMotors.SpinTo(revs, vex::rotationUnits::rev, true);
-    controls.controller.Screen.clearScreen();
-    controls.controller.Screen.setCursor(1, 7);
-    controls.controller.Screen.print(rInit);
-    controls.controller.Screen.setCursor(2, 7);
-    controls.controller.Screen.print(lInit);
-    controls.controller.Screen.setCursor(3, 1);
-    controls.controller.Screen.print(ABS(revs));
-      while(abs2(ReadRight() - rInit) < abs2(revs) || abs2(ReadLeft() - lInit) < abs2(revs)){
-        controls.controller.Screen.setCursor(1, 13);
-        controls.controller.Screen.print(abs2(ReadRight() - rInit));
-        controls.controller.Screen.setCursor(2, 13);
-        controls.controller.Screen.print(abs2(ReadLeft() - lInit));
-      }
-
-    //   Stop();
-
-    controls.controller.Screen.setCursor(1, 1);
-    controls.controller.Screen.print(ReadRight());
-    controls.controller.Screen.setCursor(2, 1);
-    controls.controller.Screen.print(ReadLeft());
-    controls.controller.Screen.setCursor(3, 7);
-    controls.controller.Screen.print(revs);
-  }
