@@ -8,6 +8,7 @@
 /*----------------------------------------------------------------------------*/
 #include "vex.h"
 #include "gifclass.h"
+#include <cmath>
 
 using namespace vex;
 #define speed 20
@@ -56,30 +57,45 @@ void liftOff(){
   liftControl(false);
 }
 
+void Descore(){
+  descore = true;
+}
+void Undescore(){
+  descore = false;
+}
+
+void IntakeGo(){
+  intake.spin(reverse, 100, pct);
+}
+
+void IntakeNotGo(){
+  intake.spin(fwd, 100, pct);
+}
+
+void IntakeStop(){
+  intake.stop();
+}
+
 void shoot(){
   lever.resetPosition();
+  IntakeGo();
   while(!leverLimit.pressing()){
     lever.spin(fwd, 100, pct);
   }
   Controller1.Screen.setCursor(1,1);
   Controller1.Screen.print(leverLimit.pressing());
   lever.stop();
+  IntakeStop();
 
   double distance = lever.position(degrees);
   Controller1.Screen.setCursor(1,1);
   Controller1.Screen.print(distance);
 
-  while(lever.position(degrees) > 0){
+  lever.spin(reverse, 100, pct);
+  while(std::abs(lever.velocity(velocityUnits::rpm)) < 0.1f){
     lever.spin(reverse, 100, pct);
   }
 
-}
-
-void Descore(){
-  descore = true;
-}
-void Undescore(){
-  descore = false;
 }
 
 int main() {
@@ -91,6 +107,10 @@ int main() {
   Controller1.ButtonLeft.pressed(Descore);
   Controller1.ButtonRight.pressed(Undescore);
   Controller1.ButtonA.pressed(shoot);
+  Controller1.ButtonL1.pressed(IntakeNotGo);
+  Controller1.ButtonR1.pressed(IntakeGo);
+  Controller1.ButtonL1.released(IntakeStop);
+  Controller1.ButtonR1.released(IntakeStop);
   
   while(1) {
     Brain.Screen.render();
@@ -125,22 +145,6 @@ int main() {
     double rightB = y2 + x2 - turning;
 
     setVel(leftF, leftB, rightF, rightB);
-
-    if(Controller1.ButtonL1.pressing()){
-      intake.spin(reverse, 100, pct);
-    }else if(Controller1.ButtonL2.pressing()){
-      intake.spin(fwd, 100, pct);
-    }else{
-      intake.stop();
-    }
-
-    if(Controller1.ButtonR1.pressing()){
-      lever.spin(reverse, 100, pct);
-    }else if(Controller1.ButtonR2.pressing() && !leverLimit.pressing()){
-      lever.spin(fwd, 100, pct);
-    }else{
-      lever.stop();
-    }
 
     Controller1.ButtonUp.pressed(liftOn);
     Controller1.ButtonDown.pressed(liftOff);

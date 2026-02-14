@@ -21,8 +21,16 @@ struct Vector2{
             return std::sqrt(x*x + y*y);
         }
 
+        Vector2& Rotate(float deg){
+            float r = deg * (M_PI / 180.0f);
+            float newX = x * std::cos(r) - y * std::sin(r);
+            y = x * std::sin(r) + y * std::cos(r);
+            x = newX;
+            return *this;
+        }
+
         float inline GetAngle(){
-            return std::atan2(x, y) * (180.0f/M_PI);
+            return std::atan2(y, x) * (180.0f/M_PI);
         }
 
         Vector2& Normalize(){

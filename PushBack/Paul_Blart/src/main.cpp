@@ -56,18 +56,18 @@
 
 vex::competition comp;
 vex::brain Brain;
-vex::optical ballOptical = vex::optical(vex::PORT18);
 
 MCEC::SwerveDrive drivetrain(
-  vex::PORT1 , vex::PORT2 , vex::PORT3 , 
-  vex::PORT4 , vex::PORT5 , vex::PORT6 , 
-  vex::PORT7 , vex::PORT8 , vex::PORT9 ,
-  vex::PORT10, vex::PORT11, vex::PORT12
+  vex::PORT4 , vex::PORT5 , vex::PORT6 , // front left 
+  vex::PORT1 , vex::PORT2 , vex::PORT3 , // front right
+  vex::PORT7 , vex::PORT8 , vex::PORT9 , // back left
+  vex::PORT10, vex::PORT11, vex::PORT12  // back left
 );
 
 // Motors
-  vex::motor intake1    = vex::motor(vex::PORT13);
-  vex::motor intakeFront  = vex::motor(vex::PORT14);
+  vex::motor intakeb = vex::motor(vex::PORT18);
+  vex::motor intakem = vex::motor(vex::PORT19);
+  vex::motor shoot   = vex::motor(vex::PORT20);
 
   vex::inertial inertial = vex::inertial(vex::PORT15);
 
@@ -88,6 +88,45 @@ void DriverLoop(){
   }else{
     drivetrain.Stop(vex::brakeType::coast);
   }
+
+}
+
+void IntakeStore(){
+  intakeb.spin(vex::forward, 80, vex::pct);
+  intakem.spin(vex::forward, 80, vex::pct);
+}
+void IntakeNotStore(){
+  intakeb.spin(vex::reverse, 80, vex::pct);
+  intakem.spin(vex::reverse, 80, vex::pct);
+}
+void IntakeGo(){
+  intakeb.spin(vex::forward, 80, vex::pct);
+  intakem.spin(vex::forward, 80, vex::pct);
+  shoot.spin(vex::reverse, 80, vex::pct);
+}
+void IntakeNotGo(){
+  intakeb.spin(vex::reverse, 80, vex::pct);
+  intakem.spin(vex::reverse, 80, vex::pct);
+  shoot.spin(vex::forward, 80, vex::pct);
+}
+void IntakeStop(){
+  intakeb.stop();
+  intakem.stop();
+  shoot.stop();
+}
+
+void ShivDown(){
+
+}
+void ShivUp(){
+  
+}
+
+void TurretUp(){
+
+}
+void TurretDown(){
+  
 }
 
 void Driver(){
@@ -103,7 +142,15 @@ void Auton(){
 }
 
 void SetControls(){
+  controls.R1.SetOnPress(IntakeGo);
+  controls.L1.SetOnPress(IntakeNotGo);
+  controls.R2.SetOnPress(IntakeStore);
+  controls.L2.SetOnPress(IntakeNotStore);
 
+  controls.R1.SetOnRelease(IntakeStop);
+  controls.L1.SetOnRelease(IntakeStop);
+  controls.R2.SetOnRelease(IntakeStop);
+  controls.L2.SetOnRelease(IntakeStop);
 }
 
 void InitInertial(){
@@ -128,6 +175,17 @@ int main(){
   InitInertial();
   SetControls();
   SetupFieldControl();
+
+  drivetrain.SetRotationOffsets(
+    129.28f, //fl
+    78.04f, //fr
+    129.28f, //bl
+    345.49f //br
+  );
+  drivetrain.frontLeft.SetPIDVariables(0.1f, 0.001f, 0.01f);
+  drivetrain.frontRight.SetPIDVariables(0.1f, 0.001f, 0.01f);
+  drivetrain.backLeft.SetPIDVariables(0.1f, 0.001f, 0.01f);
+  drivetrain.backRight.SetPIDVariables(0.1f, 0.001f, 0.01f);
 
   controls.controller.rumble(".");
   while(1) {

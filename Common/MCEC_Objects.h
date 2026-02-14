@@ -15,6 +15,7 @@
 
 #define ABS(num) ((num < 0) ? (num * -1) : num)
 
+
 typedef std::function<void()> ButtonCB;
 //
 //(14.5f + 9)
@@ -26,22 +27,31 @@ float abs2(float n);
 float AngleDiff(float a_1, float a_2);
 extern vex::competition comp;
 extern vex::brain Brain;
+extern vex::inertial inertial;
 
 namespace MCEC{
-
+    template <typename T>
+    inline T Clamp(T a, T t, T b){
+        return (a > t) ? t : ((a < b) ? b : a);
+    }
+    
     class RotationPID{
         public:
             RotationPID(float P, float I, float D) : m_P(P), m_I(I), m_D(D) { }
+            RotationPID() : m_P(0), m_I(0), m_D(0) {}
             void SetVariables(float P, float I, float D);
             void SetTarget(float targ);
             void Prime(float curAngle, float targAngle);
+            void Reset();
             bool AtTarget(float curAngle, float dt);
-            float Update(float curAngle, float dt);
+            float Update(float error, float dt);
         private:        
             float m_P = 1, m_I = 1, m_D = 0.1f;
             float _target = 0;
             float _integral = 0;
             float _prevError = 0;
+            float _maxOutput = 1.0f;
+            float _integralMax = 0.3f;
     };
     class MotorGroup{
         public:
@@ -213,22 +223,32 @@ namespace MCEC{
 
     class SwervePod{
         public:
+            int screen = 1;
+            RotationPID rotationPID;
             const static int MAX_MOTOR_POWER = 100;
-            const static int MAX_ROTATION_POWER = 60;
-            const static int ROTATION_ERROR = 5;
+            const static constexpr float MAX_ROTATION_POWER = 30.0f;
+            const static int MAX_ROTATION_ANGLE = 90;
+            const static int ROTATION_ERROR = 2;
+            const static int REVERSE_ENTER = 100;
+            const static int REVERSE_EXIT = 80;
             void SetPowers(Vector2 power);
             void GoToVector(Vector2 targ);
             float GetPivot(Vector2 targ, float angle);
             void Brake(vex::brakeType br);
+            float GetAngle();
+            void SetRotationOffset(float _off);
+            void SetPIDVariables(float P, float I, float D);
 
             SwervePod(int32_t t, int32_t b, int32_t r) : top(t), bottom(b), rotation(r) {}
 
         private:
             const static Vector2 MOTOR_TOP_VECTOR;
             const static Vector2 MOTOR_BOT_VECTOR;
+            float lastTime;
             vex::motor top, bottom;
             vex::rotation rotation;
             bool onShortest = false, reversed = false;
+            float rotationOffset = 0.0f;
     };
 
     class SwerveDrive {
@@ -244,14 +264,18 @@ namespace MCEC{
             {}
             void Stop(vex::brakeType br = vex::brakeType::coast);
             void Drive(Vector2 driveVector, float rotationSpeed);
-        private:
+            void SetRotationOffsets(float, float, float, float);
             SwervePod frontLeft, frontRight, backLeft, backRight;
-            const static int MAX_SPEED = 100;
+        private:
+            const static int MAX_MODULE_OUTPUT = 100;
             
             float wheelbase  = 20.25f - 2 * (2.708f);
             float trackwidth = 20.25f - 2 * (2.708f);
     };
 
     float Lerp(float a, float b, float t);
+
 }
+extern MCEC::Controller controls;
+
 #endif
