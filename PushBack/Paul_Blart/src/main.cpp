@@ -58,16 +58,16 @@ vex::competition comp;
 vex::brain Brain;
 
 MCEC::SwerveDrive drivetrain(
-  vex::PORT4 , vex::PORT5 , vex::PORT6 , // front left 
-  vex::PORT1 , vex::PORT2 , vex::PORT3 , // front right
-  vex::PORT7 , vex::PORT8 , vex::PORT9 , // back left
-  vex::PORT10, vex::PORT11, vex::PORT12  // back left
+  vex::PORT1 , vex::PORT2 , vex::PORT3 , // front left // former front right
+  vex::PORT8 , vex::PORT13, vex::PORT9 , // front right // former back right
+  vex::PORT4 , vex::PORT5 , vex::PORT6 , // back left // former front left
+  vex::PORT10, vex::PORT16, vex::PORT12  // back right // former back left
 );
 
 // Motors
-  vex::motor intakeb = vex::motor(vex::PORT18);
-  vex::motor intakem = vex::motor(vex::PORT19);
-  vex::motor shoot   = vex::motor(vex::PORT20);
+  vex::motor intakeb = vex::motor(vex::PORT17);
+  vex::motor intakem = vex::motor(vex::PORT18);
+  vex::motor shoot   = vex::motor(vex::PORT19);
 
   vex::inertial inertial = vex::inertial(vex::PORT15);
 
@@ -75,16 +75,18 @@ MCEC::SwerveDrive drivetrain(
 // vex::controller
 MCEC::Controller controls = MCEC::Controller();
 
+vex::digital_out turret(Brain.ThreeWirePort.B);
+
 
 void StopMoving(){
-  drivetrain.Stop();
+  drivetrain.Stop(vex::brakeType::hold);
 }
 
 void DriverLoop(){
   controls.Set();
   if(controls.lStick.isMoved() || controls.rStick.isMoved()){
-    float x = controls.rStick.x / 100.0f;
-    drivetrain.Drive(Vector2(controls.lStick.x, controls.lStick.y), x);
+    float x = controls.rStick.x;
+    drivetrain.Drive(Vector2(controls.lStick.y, -controls.lStick.x), x);
   }else{
     drivetrain.Stop(vex::brakeType::coast);
   }
@@ -102,12 +104,12 @@ void IntakeNotStore(){
 void IntakeGo(){
   intakeb.spin(vex::forward, 80, vex::pct);
   intakem.spin(vex::forward, 80, vex::pct);
-  shoot.spin(vex::reverse, 80, vex::pct);
+  shoot.spin(vex::forward, 80, vex::pct);
 }
 void IntakeNotGo(){
   intakeb.spin(vex::reverse, 80, vex::pct);
   intakem.spin(vex::reverse, 80, vex::pct);
-  shoot.spin(vex::forward, 80, vex::pct);
+  shoot.spin(vex::reverse, 80, vex::pct);
 }
 void IntakeStop(){
   intakeb.stop();
@@ -122,11 +124,14 @@ void ShivUp(){
   
 }
 
+void TurretDown();
 void TurretUp(){
-
+  turret.set(true);
+  controls.A.SetOnPress(TurretDown);
 }
 void TurretDown(){
-  
+  turret.set(false);
+  controls.A.SetOnPress(TurretUp);
 }
 
 void Driver(){
@@ -146,6 +151,8 @@ void SetControls(){
   controls.L1.SetOnPress(IntakeNotGo);
   controls.R2.SetOnPress(IntakeStore);
   controls.L2.SetOnPress(IntakeNotStore);
+
+  controls.A.SetOnPress(TurretDown);
 
   controls.R1.SetOnRelease(IntakeStop);
   controls.L1.SetOnRelease(IntakeStop);
@@ -171,21 +178,26 @@ void SetupFieldControl(){
   }
 }
 
+//what does PID stand for????
+//PROPORTIONAL, INTEGRAL, DERIVATIVE
+float PID[] = {0.5f, 0.05f, 0.02f};
+
 int main(){
   InitInertial();
   SetControls();
   SetupFieldControl();
 
   drivetrain.SetRotationOffsets(
-    129.28f, //fl
-    78.04f, //fr
-    129.28f, //bl
-    345.49f //br
+    //updated
+    1.14f, //fl 3
+    84.90f, //fr 9
+    92.37f, //bl 6
+    352.52f //br 12
   );
-  drivetrain.frontLeft.SetPIDVariables(0.1f, 0.001f, 0.01f);
-  drivetrain.frontRight.SetPIDVariables(0.1f, 0.001f, 0.01f);
-  drivetrain.backLeft.SetPIDVariables(0.1f, 0.001f, 0.01f);
-  drivetrain.backRight.SetPIDVariables(0.1f, 0.001f, 0.01f);
+  drivetrain.frontLeft.SetPIDVariables (0.04f, 0.0f, 0.004f);
+  drivetrain.frontRight.SetPIDVariables(0.0f, 0.0f, 0.0f);
+  drivetrain.backLeft.SetPIDVariables  (0.0f, 0.0f, 0.0f);
+  drivetrain.backRight.SetPIDVariables (0.0f, 0.0f, 0.0f);
 
   controls.controller.rumble(".");
   while(1) {

@@ -8,6 +8,15 @@ float abs2(float n){
     if(n < 0) return n * -1;
     return n;
 }
+template <typename T>
+T inline max2(T a, T b){
+  return a > b ? a : b;
+}
+
+template <typename T>
+T inline Clamp2(T n, T min, T max){
+  return (n < min) ? min : ((n > max) ? max : n);
+}
 
 float AngleDiff(float a_1, float a_2){
     float a1 = a_1 * (M_PI / 180.0f);
@@ -248,23 +257,26 @@ namespace MCEC{
   }
 
   float RotationPID::Update(float error, float dt){
-        if(dt <= 0.001f || dt > 0.1f){
-            dt = 0.02f;  // Default to 50Hz
-        }
+        // if(dt <= 0.001f || dt > 0.1f){
+        //     dt = 0.02f;  // Default to 50Hz
+        // }
         
         _integral += error * dt;
         _integral = Clamp(_integral, -_integralMax, _integralMax);
         
         float derivative = (error - _prevError) / dt;
         
+        //PPID
         float P = m_P * error;
         float I = m_I * _integral;
         float D = m_D * derivative;
+
         
         _prevError = error;
         
         float output = P + I + D;
-        return Clamp(output, -_maxOutput, _maxOutput);
+        
+        return Clamp2(output, -_maxOutput, _maxOutput);
     }
 
   void RotationPID::SetTarget(float targ){
@@ -313,66 +325,96 @@ float WrapAngle(float angle) {
   return angle;
 }
 // SwervePod
-  void SwervePod::SetPowers(Vector2 power){
-    float topPower = power.x + (power.y * MAX_ROTATION_POWER);
-    float botPower = power.x - (power.y * MAX_ROTATION_POWER);
+  void SwervePod::SetPowers(Vector2 power, bool straight){
+    float topPower = power.x - (power.y * MAX_ROTATION_POWER);
+    float botPower = power.x + (power.y * MAX_ROTATION_POWER);
+
+    // if(!straight){
+    //   topPower += (power.y * MAX_ROTATION_POWER);
+    //   botPower -= (power.y * MAX_ROTATION_POWER);
+    // }else{
+    //   topPower = botPower;
+    // }
     
-    float maxPower = std::max(std::abs(topPower), std::abs(botPower));
-    if (maxPower > MAX_MOTOR_POWER) {
+    float maxPower = max2(abs2(topPower), abs2(botPower));
+    if (abs2(maxPower) > MAX_MOTOR_POWER) {
       topPower *= MAX_MOTOR_POWER / maxPower;
       botPower *= MAX_MOTOR_POWER / maxPower;
     }
-    
+
+    if(abs2(topPower) < 0.01f){
+      top.stop(vex::brakeType::hold);
+    }else if(abs2(botPower) < 0.01f){
+      bottom.stop(vex::brakeType::hold);
+    }
     top.spin(vex::forward, topPower, vex::pct);
     bottom.spin(vex::reverse, botPower, vex::pct);
   }
-  void SwervePod::GoToVector(Vector2 targ){
+  void SwervePod::GoToVector(Vector2 targ, bool canForward){
+    static float start = (vex::timer::system() / 1000.0f), end;
     float curTime = (vex::timer::system() / 1000.0f);
     float dt = curTime - lastTime;
     lastTime = curTime;
 
-    if (dt <= 0 || dt > 0.1) dt = 0.02;
+    // if (dt <= 0 || dt > 0.1) dt = 0.02;
 
     float curAngle = GetAngle();
     float move = targ.GetMagnitude();
     float angl = targ.GetAngle();
     float angleDiff = AngleDiff(angl, curAngle);
 
-    Brain.Screen.setCursor(screen, 1);
-    Brain.Screen.print("%.2f -> %.2f", curAngle, angl);
 
-    if(std::abs(angleDiff) > REVERSE_ENTER && !onShortest){
-      reversed = !reversed;
-      onShortest = true;
-    }else if (std::abs(angleDiff) < REVERSE_EXIT){
-      onShortest = false;
-    }
+    // if(std::abs(angleDiff) > REVERSE_ENTER && !onShortest){
+    //   reversed = !reversed;
+    //   onShortest = true;
+    // }else if (std::abs(angleDiff) < REVERSE_EXIT){
+    //   onShortest = false;
+    // }
     if(reversed){
       move = -move;
       angl = WrapAngle(angl + 180);
       angleDiff = AngleDiff(angl, curAngle);
     }
 
+    // float alignmentFactor = std::cos(angleDiff * M_PI / 180.0);
+    // move *= fmax(alignmentFactor, 0.0);
+
     float rotation = rotationPID.Update(angleDiff, dt);
 
-    if(std::abs(angleDiff) < ROTATION_ERROR){
+    if(abs2(angleDiff) <= ROTATION_ERROR){
+      if(!canForward) move = 0;
+      if(!atTarget) {
+        Brake(vex::brakeType::hold);
+        end = curTime;
+        atTarget = true;
+      }
       rotation = 0;
+    }else{
+      move = 0;
+      if(atTarget){
+        start = curTime;
+        atTarget = false;
+      }
+    }
+    
+    Vector2 powerVector(move, rotation);
+
+    if(screen < 4){
+      controls.controller.Screen.setCursor(screen, 1);
+      controls.controller.Screen.print("%.4f   ", rotation);
+      controls.controller.Screen.setCursor(screen + 1, 1);
+      controls.controller.Screen.print("%.2f->%.2f|%.2f    ", curAngle, angl, angleDiff);
+      if(atTarget){
+        controls.controller.Screen.setCursor(screen + 2, 1);
+        controls.controller.Screen.print("Took: %.2fs    ", end - start);
+      }
     }
 
-    // Brain.Screen.setCursor(screen, 8);
-    // Brain.Screen.print("tA:%.1f cA:%.1f", angl, curAngle);
-    // Brain.Screen.setCursor(screen, 22);
-    // Brain.Screen.print("E:%.1f R:%.3f %s  ", angleDiff, rotation, reversed ? "R" : "F");
-    // Brain.Screen.setCursor(screen, 20);
-    // Brain.Screen.print("dt:%.3f m:%.2f    ", dt, move);
-
-    // pivot = 0;
-    Vector2 powerVector(move, rotation);
-    SetPowers(powerVector);
+    SetPowers(powerVector, canForward);
   }
+
   float SwervePod::GetPivot(Vector2 target, float angle){
     float angleDiff = AngleDiff(target.GetAngle(), angle);
-      
 
     if(std::abs(angleDiff) > REVERSE_ENTER){
       if(!onShortest){
@@ -416,12 +458,12 @@ float WrapAngle(float angle) {
     static const Vector2 BL_pos(-trackwidth/2, -wheelbase/2);
     static const Vector2 BR_pos( trackwidth/2, -wheelbase/2);
     
-    Vector2 FL_rot(-FL_pos.y * rotationSpeed, FL_pos.x * rotationSpeed);
-    Vector2 FR_rot(-FR_pos.y * rotationSpeed, FR_pos.x * rotationSpeed);
-    Vector2 BL_rot(-BL_pos.y * rotationSpeed, BL_pos.x * rotationSpeed);
-    Vector2 BR_rot(-BR_pos.y * rotationSpeed, BR_pos.x * rotationSpeed);
+    Vector2 FL_rot(-FL_pos.y * rotationSpeed,  FL_pos.x * rotationSpeed);
+    Vector2 FR_rot(-FR_pos.y * rotationSpeed,  FR_pos.x * rotationSpeed);
+    Vector2 BL_rot(BL_pos.y * rotationSpeed,  -BL_pos.x * rotationSpeed);
+    Vector2 BR_rot(-BR_pos.y * rotationSpeed,  BR_pos.x * rotationSpeed);
     
-    driveVector.Rotate(-inertial.heading());
+    // driveVector.Rotate(-inertial.heading());
 
     Vector2 FL_target = driveVector + FL_rot;
     Vector2 FR_target = driveVector + FR_rot;
@@ -442,11 +484,14 @@ float WrapAngle(float angle) {
       BL_target *= scale;
       BR_target *= scale;
     }
-    
-    frontLeft.GoToVector(FL_target);
-    frontRight.GoToVector(FR_target);
-    backLeft.GoToVector(BL_target);
-    backRight.GoToVector(BR_target);
+    bool canForward = 
+      frontLeft.atTarget && frontRight.atTarget && 
+      backLeft.atTarget && backRight.atTarget;
+
+    frontLeft.GoToVector(FL_target, canForward);
+    frontRight.GoToVector(FR_target, canForward);
+    backLeft.GoToVector(BL_target, canForward);
+    backRight.GoToVector(BR_target, canForward);
   }
   void SwerveDrive::Stop(vex::brakeType br){
     frontLeft.Brake(br); frontRight.Brake(br);
@@ -456,10 +501,10 @@ float WrapAngle(float angle) {
     frontLeft.SetRotationOffset(fl); frontRight.SetRotationOffset(fr);
     backLeft.SetRotationOffset(bl); backRight.SetRotationOffset(br);
 
-    frontLeft.screen = 1;
-    frontRight.screen = 2;
-    backLeft.screen = 3;
-    backRight.screen = 4;
+    frontLeft.screen  =  frontLeft.rotationPID.screen = 1;
+    frontRight.screen = frontRight.rotationPID.screen = 4;
+    backLeft.screen   =   backLeft.rotationPID.screen = 4;
+    backRight.screen  =  backRight.rotationPID.screen = 4;
 
     frontLeft.rotationPID.Prime(frontLeft.GetAngle(), frontLeft.GetAngle());
     frontRight.rotationPID.Prime(frontRight.GetAngle(), frontRight.GetAngle());

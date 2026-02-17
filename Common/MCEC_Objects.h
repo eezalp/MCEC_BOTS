@@ -45,6 +45,7 @@ namespace MCEC{
             void Reset();
             bool AtTarget(float curAngle, float dt);
             float Update(float error, float dt);
+            int screen = 4;
         private:        
             float m_P = 1, m_I = 1, m_D = 0.1f;
             float _target = 0;
@@ -226,13 +227,14 @@ namespace MCEC{
             int screen = 1;
             RotationPID rotationPID;
             const static int MAX_MOTOR_POWER = 100;
-            const static constexpr float MAX_ROTATION_POWER = 30.0f;
-            const static int MAX_ROTATION_ANGLE = 90;
-            const static int ROTATION_ERROR = 2;
+            const static constexpr float MAX_ROTATION_POWER = 45.0f;
+            const static constexpr float MAX_ROTATION_ANGLE = 90;
+            const static constexpr float ROTATION_ERROR = 0.5f;
             const static int REVERSE_ENTER = 100;
             const static int REVERSE_EXIT = 80;
-            void SetPowers(Vector2 power);
-            void GoToVector(Vector2 targ);
+            bool atTarget = false;
+            void SetPowers(Vector2 power, bool straight = false);
+            void GoToVector(Vector2 targ, bool canForward = false);
             float GetPivot(Vector2 targ, float angle);
             void Brake(vex::brakeType br);
             float GetAngle();
