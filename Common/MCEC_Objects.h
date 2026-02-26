@@ -23,13 +23,14 @@ static const float wheelRad = 3.25f / 2;
 static const float wheelDist = (10.0f + (5.0f/16.0f) + (12.5f) + (5.0f/16.0f)) / 2;
 static const float wheelCirc = 2 * wheelRad * M_PI;
 
-float abs2(float n);
-float AngleDiff(float a_1, float a_2);
 extern vex::competition comp;
 extern vex::brain Brain;
 extern vex::inertial inertial;
 
 namespace MCEC{
+    float abs2(float n);
+    float AngleDiff(float a_1, float a_2);
+
     template <typename T>
     inline T Clamp(T a, T t, T b){
         return (a > t) ? t : ((a < b) ? b : a);
@@ -189,9 +190,7 @@ namespace MCEC{
             y = _y;
         }
 
-        bool isMoved(){
-          return (x != 0 || y != 0);
-        }
+        bool isMoved();
     };
 
     class Button{
@@ -226,12 +225,14 @@ namespace MCEC{
         public:
             int screen = 1;
             RotationPID rotationPID;
+            vex::rotation rotation;
             const static int MAX_MOTOR_POWER = 100;
-            const static constexpr float MAX_ROTATION_POWER = 45.0f;
+            const static constexpr float MAX_ROTATION_POWER = 100.0f;
             const static constexpr float MAX_ROTATION_ANGLE = 90;
-            const static constexpr float ROTATION_ERROR = 0.5f;
-            const static int REVERSE_ENTER = 100;
-            const static int REVERSE_EXIT = 80;
+            const static constexpr float ROTATION_ERROR = 7.5f;
+            const static int REVERSE_ENTER = 45;
+            const static int REVERSE_EXIT = 39;
+            bool cosplineMode = false;
             bool atTarget = false;
             void SetPowers(Vector2 power, bool straight = false);
             void GoToVector(Vector2 targ, bool canForward = false);
@@ -248,13 +249,13 @@ namespace MCEC{
             const static Vector2 MOTOR_BOT_VECTOR;
             float lastTime;
             vex::motor top, bottom;
-            vex::rotation rotation;
             bool onShortest = false, reversed = false;
             float rotationOffset = 0.0f;
     };
 
     class SwerveDrive {
         public:
+
             SwerveDrive(
                 int32_t FLt, int32_t FLb, int32_t FLr,
                 int32_t FRt, int32_t FRb, int32_t FRr,
@@ -267,12 +268,26 @@ namespace MCEC{
             void Stop(vex::brakeType br = vex::brakeType::coast);
             void Drive(Vector2 driveVector, float rotationSpeed);
             void SetRotationOffsets(float, float, float, float);
+            void EnterCosplineMode(){
+                frontLeft .cosplineMode = true;
+                frontRight.cosplineMode = true;
+                backLeft .cosplineMode = true;
+                backRight.cosplineMode = true;
+                cospline = true;
+            }
+            void ExitCosplineMode(){
+                frontLeft .cosplineMode = false;
+                frontRight.cosplineMode = false;
+                backLeft .cosplineMode = false;
+                backRight.cosplineMode = false;
+                cospline = false;
+            }
             SwervePod frontLeft, frontRight, backLeft, backRight;
         private:
             const static int MAX_MODULE_OUTPUT = 100;
-            
-            float wheelbase  = 20.25f - 2 * (2.708f);
-            float trackwidth = 20.25f - 2 * (2.708f);
+            bool cospline = false;
+            float wheelbase  = 2;//20.25f - 2 * (2.708f);
+            float trackwidth = 2;//20.25f - 2 * (2.708f);
     };
 
     float Lerp(float a, float b, float t);

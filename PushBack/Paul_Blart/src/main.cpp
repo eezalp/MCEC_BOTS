@@ -58,18 +58,18 @@ vex::competition comp;
 vex::brain Brain;
 
 MCEC::SwerveDrive drivetrain(
-  vex::PORT1 , vex::PORT2 , vex::PORT3 , // front left // former front right
-  vex::PORT8 , vex::PORT13, vex::PORT9 , // front right // former back right
-  vex::PORT4 , vex::PORT5 , vex::PORT6 , // back left // former front left
-  vex::PORT10, vex::PORT16, vex::PORT12  // back right // former back left
+  vex::PORT13, vex::PORT12, vex::PORT11, // front left // former front right
+  vex::PORT18, vex::PORT19, vex::PORT20, // front right // former back right
+  vex::PORT3 , vex::PORT2 , vex::PORT1 ,// back left // former back left
+  vex::PORT8 , vex::PORT9 , vex::PORT10 // back right // former front left
 );
 
 // Motors
-  vex::motor intakeb = vex::motor(vex::PORT17);
-  vex::motor intakem = vex::motor(vex::PORT18);
-  vex::motor shoot   = vex::motor(vex::PORT19);
+  vex::motor intakeb = vex::motor(vex::PORT5);
+  vex::motor intakem = vex::motor(vex::PORT6);
+  vex::motor shoot   = vex::motor(vex::PORT7);
 
-  vex::inertial inertial = vex::inertial(vex::PORT15);
+  vex::inertial inertial = vex::inertial(vex::PORT16);
 
 
 // vex::controller
@@ -83,10 +83,29 @@ void StopMoving(){
 }
 
 void DriverLoop(){
+  static Vector2 lastJoystick = Vector2(0, 0);
   controls.Set();
   if(controls.lStick.isMoved() || controls.rStick.isMoved()){
+    Vector2 controllerVector(-controls.lStick.y, -controls.lStick.x);
+    float angleDiff = MCEC::abs2(MCEC::AngleDiff(controllerVector.GetAngle(), lastJoystick.GetAngle()));
     float x = controls.rStick.x;
-    drivetrain.Drive(Vector2(controls.lStick.y, -controls.lStick.x), x);
+    
+    // if(angleDiff > 2.0f){
+    //   drivetrain.Drive(controllerVector, x);
+    //   controls.controller.Screen.setCursor(1, 1);
+    //   controls.controller.Screen.print("%.4fc  ", controllerVector.GetAngle());
+    //   controls.controller.Screen.setCursor(2, 1);
+    //   controls.controller.Screen.print("%.4fc  ", controllerVector.GetMagnitude());
+    //   lastJoystick = controllerVector;
+    // }else{
+    //   drivetrain.Drive(lastJoystick.Normalize() * controllerVector.GetMagnitude(), x);
+    //   controls.controller.Screen.setCursor(1, 1);
+    //   controls.controller.Screen.print("%.4fl  ", lastJoystick.GetAngle());
+    //   controls.controller.Screen.setCursor(2, 1);
+    //   controls.controller.Screen.print("%.4fl  ", lastJoystick.GetMagnitude());
+    // }
+      drivetrain.Drive(controllerVector, x);
+
   }else{
     drivetrain.Stop(vex::brakeType::coast);
   }
@@ -115,6 +134,21 @@ void IntakeStop(){
   intakeb.stop();
   intakem.stop();
   shoot.stop();
+}
+
+void ExitBlartMode();
+
+void EnterBlartMode(){
+  drivetrain.EnterCosplineMode();
+  controls.controller.Screen.setCursor(3, 1);
+  controls.controller.Screen.print("Blart Mode Activated");
+  controls.Y.SetOnPress(ExitBlartMode);
+}
+
+void ExitBlartMode(){
+  drivetrain.ExitCosplineMode();
+  controls.controller.Screen.clearScreen();
+  controls.Y.SetOnPress(EnterBlartMode);
 }
 
 void ShivDown(){
@@ -153,6 +187,7 @@ void SetControls(){
   controls.L2.SetOnPress(IntakeNotStore);
 
   controls.A.SetOnPress(TurretDown);
+  controls.Y.SetOnPress(ExitBlartMode);
 
   controls.R1.SetOnRelease(IntakeStop);
   controls.L1.SetOnRelease(IntakeStop);
@@ -190,14 +225,17 @@ int main(){
   drivetrain.SetRotationOffsets(
     //updated
     1.14f, //fl 3
-    84.90f, //fr 9
-    92.37f, //bl 6
-    352.52f //br 12
+    173.40f, //fr 9
+    272.90f - 180, //bl 6
+    41.48f + 270 //br 12
   );
-  drivetrain.frontLeft.SetPIDVariables (0.04f, 0.0f, 0.004f);
-  drivetrain.frontRight.SetPIDVariables(0.0f, 0.0f, 0.0f);
-  drivetrain.backLeft.SetPIDVariables  (0.0f, 0.0f, 0.0f);
-  drivetrain.backRight.SetPIDVariables (0.0f, 0.0f, 0.0f);
+  drivetrain.frontLeft.SetPIDVariables (0.4f, 0.0f, 0.008f);
+  drivetrain.frontRight.SetPIDVariables(0.4f, 0.0f, 0.008f);
+  drivetrain.backLeft.SetPIDVariables  (0.4f, 0.0f, 0.008f);
+  drivetrain.backRight.SetPIDVariables (0.4f, 0.0f, 0.008f);
+  // drivetrain.frontRight.SetPIDVariables(0.0f, 0.0f, 0.00f);
+  // drivetrain.backLeft.SetPIDVariables  (0.0f, 0.0f, 0.00f);
+  // drivetrain.backRight.SetPIDVariables (0.0f, 0.0f, 0.00f);
 
   controls.controller.rumble(".");
   while(1) {
