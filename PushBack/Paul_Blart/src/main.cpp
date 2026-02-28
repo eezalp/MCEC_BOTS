@@ -48,7 +48,7 @@
 |       Down: None               B:None                          |
 ----------------------------------------------------------------*/
 
-#include <MCEC_Objects.h>
+#include "MCEC_Objects.h"
 
 #define TURRET_MAX_ANGLE 23
 #define TURRET_MIN_ANGLE 11
@@ -84,32 +84,25 @@ void StopMoving(){
 
 void DriverLoop(){
   static Vector2 lastJoystick = Vector2(0, 0);
+  static float start = (vex::timer::system() / 1000.0f), end;
+  static float lastTime;
+  float curTime = (vex::timer::system() / 1000.0f);
+  float dt = curTime - lastTime;
+  lastTime = curTime;
   controls.Set();
+
+  drivetrain.UpdatePosition(dt);
+
   if(controls.lStick.isMoved() || controls.rStick.isMoved()){
     Vector2 controllerVector(-controls.lStick.y, -controls.lStick.x);
     float angleDiff = MCEC::abs2(MCEC::AngleDiff(controllerVector.GetAngle(), lastJoystick.GetAngle()));
     float x = controls.rStick.x;
     
-    // if(angleDiff > 2.0f){
-    //   drivetrain.Drive(controllerVector, x);
-    //   controls.controller.Screen.setCursor(1, 1);
-    //   controls.controller.Screen.print("%.4fc  ", controllerVector.GetAngle());
-    //   controls.controller.Screen.setCursor(2, 1);
-    //   controls.controller.Screen.print("%.4fc  ", controllerVector.GetMagnitude());
-    //   lastJoystick = controllerVector;
-    // }else{
-    //   drivetrain.Drive(lastJoystick.Normalize() * controllerVector.GetMagnitude(), x);
-    //   controls.controller.Screen.setCursor(1, 1);
-    //   controls.controller.Screen.print("%.4fl  ", lastJoystick.GetAngle());
-    //   controls.controller.Screen.setCursor(2, 1);
-    //   controls.controller.Screen.print("%.4fl  ", lastJoystick.GetMagnitude());
-    // }
-      drivetrain.Drive(controllerVector, x);
+    drivetrain.Drive(controllerVector, x);
 
   }else{
     drivetrain.Stop(vex::brakeType::coast);
   }
-
 }
 
 void IntakeStore(){
@@ -134,21 +127,6 @@ void IntakeStop(){
   intakeb.stop();
   intakem.stop();
   shoot.stop();
-}
-
-void ExitBlartMode();
-
-void EnterBlartMode(){
-  drivetrain.EnterCosplineMode();
-  controls.controller.Screen.setCursor(3, 1);
-  controls.controller.Screen.print("Blart Mode Activated");
-  controls.Y.SetOnPress(ExitBlartMode);
-}
-
-void ExitBlartMode(){
-  drivetrain.ExitCosplineMode();
-  controls.controller.Screen.clearScreen();
-  controls.Y.SetOnPress(EnterBlartMode);
 }
 
 void ShivDown(){
@@ -177,7 +155,50 @@ void Driver(){
 }
 
 void Auton(){
+  controls.controller.Screen.clearScreen();
+  controls.controller.Screen.setCursor(1, 1);
+  controls.controller.Screen.print("Auton");
 
+  drivetrain.points = {
+    //Put the path planner points here
+    // {{-61.634, 18.23}, 89.752},
+    // {{-60.747, 20.022}, 86.875},
+    // {{-59.861, 21.815}, 83.901},
+    // {{-58.974, 23.608}, 80.817},
+    // {{-58.087, 25.401}, 77.61},
+    // {{-57.2, 27.193}, 74.265},
+    // {{-56.314, 28.986}, 70.763},
+    // {{-55.427, 30.779}, 67.077},
+    // {{-54.54, 32.571}, 63.177},
+    // {{-53.654, 34.364}, 59.02},
+    // {{-52.767, 36.157}, 54.547},
+    // {{-51.88, 37.949}, 49.672},
+    // {{-50.993, 39.742}, 44.264},
+    // {{-50.107, 41.535}, 38.096},
+    // {{-49.22, 43.327}, 30.714},
+    // {{-48.333, 45.12}, 20.865},
+    // {{-47.573, 46.656}, 0},
+    // {{-47.573, 46.656}, 0},
+    // {{-38.706, 64.583}, 0}
+  };
+
+  drivetrain.GoToPoint();
+}
+
+void FaceDriver(){
+  drivetrain.FaceDirection(180);
+}
+
+void FaceOpponent(){
+  drivetrain.FaceDirection(0);
+}
+
+void FaceLeft(){
+  drivetrain.FaceDirection(90);
+}
+
+void FaceRight(){
+  drivetrain.FaceDirection(270);
 }
 
 void SetControls(){
@@ -187,7 +208,12 @@ void SetControls(){
   controls.L2.SetOnPress(IntakeNotStore);
 
   controls.A.SetOnPress(TurretDown);
-  controls.Y.SetOnPress(ExitBlartMode);
+  controls.B.SetOnPress(Auton);
+
+  controls.Down.SetOnPress(FaceDriver);
+  controls.Up.SetOnPress(FaceOpponent);
+  controls.Right.SetOnPress(FaceRight);
+  controls.Left.SetOnPress(FaceLeft);
 
   controls.R1.SetOnRelease(IntakeStop);
   controls.L1.SetOnRelease(IntakeStop);
@@ -224,10 +250,10 @@ int main(){
 
   drivetrain.SetRotationOffsets(
     //updated
-    1.14f, //fl 3
-    173.40f, //fr 9
-    272.90f - 180, //bl 6
-    41.48f + 270 //br 12
+    89.03f, //fl 3
+    173.67f, //fr 9
+    99.31f, //bl 6
+    54.49f + 90 //br 12
   );
   drivetrain.frontLeft.SetPIDVariables (0.4f, 0.0f, 0.008f);
   drivetrain.frontRight.SetPIDVariables(0.4f, 0.0f, 0.008f);
@@ -236,7 +262,13 @@ int main(){
   // drivetrain.frontRight.SetPIDVariables(0.0f, 0.0f, 0.00f);
   // drivetrain.backLeft.SetPIDVariables  (0.0f, 0.0f, 0.00f);
   // drivetrain.backRight.SetPIDVariables (0.0f, 0.0f, 0.00f);
+  controls.controller.Screen.clearScreen();
+  controls.controller.Screen.setCursor(1, 1);
+  controls.controller.Screen.print("%.2f  %.2f", drivetrain.frontLeft.rotation.angle(), drivetrain.frontRight.rotation.angle());
+  controls.controller.Screen.setCursor(3, 1);
+  controls.controller.Screen.print("%.2f  %.2f", drivetrain.backLeft.rotation.angle(), drivetrain.backRight.rotation.angle());
 
+  // controls.controller.Screen.clearScreen();
   controls.controller.rumble(".");
   while(1) {
     if(!comp.isFieldControl()){

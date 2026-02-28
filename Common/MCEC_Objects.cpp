@@ -20,6 +20,7 @@ float abs2(float n){
   if(n < 0) return n * -1;
   return n;
 }
+
 float AngleDiff(float a_1, float a_2){
   float a1 = a_1 * (M_PI / 180.0f);
   float a2 = a_2 * (M_PI / 180.0f);
@@ -30,8 +31,8 @@ float AngleDiff(float a_1, float a_2){
 bool Joystick::isMoved(){
   return (abs2(x) >= 0.1f || abs2(y) >= 0.1f);
 }
-// Drivetrain
 
+// Drivetrain
   void Drivetrain::Drive(int joyX, int joyY){
     // Ensure the joystick inputs are within the valid range
     if(ABS(joyX) > 100 || ABS(joyY) > 100){
@@ -90,6 +91,7 @@ bool Joystick::isMoved(){
 
       Stop();
   }
+
   void Drivetrain::Rotate(float targ, float power){
       float tVal = (targ * (M_PI/180.0f)) * (3.0f/5.0f) * wheelDistance / wheelCirc;
       float rInit = ReadRight(), lInit = ReadLeft();
@@ -97,56 +99,27 @@ bool Joystick::isMoved(){
 
       SpinR((targ < 0) ? -power : power);
       SpinL((targ < 0) ? power : -power);
-        // controls.controller.Screen.clearScreen();
-        // controls.controller.Screen.setCursor(1, 13);
-        // controls.controller.Screen.print(inertialInitial);
-        // controls.controller.Screen.setCursor(2, 13);
-        // controls.controller.Screen.print(abs2(inertialInitial - inertial->heading()));
-        // controls.controller.Screen.setCursor(3, 13);
-        // controls.controller.Screen.print(abs2(targ));
 
       while(
         (abs2(ReadRight() - rInit) < abs2(tVal) || abs2(ReadLeft() - lInit) < abs2(tVal)) &&
         (AngleDiff(inertialInitial, inertial->heading()) < abs2(targ))
     ){
-        // controls.controller.Screen.setCursor(1, 7);
-        // controls.controller.Screen.print(ReadRight());
-        // controls.controller.Screen.setCursor(2, 7);
-        // controls.controller.Screen.print(ReadLeft());
-        // controls.controller.Screen.setCursor(2, 13);
-        // controls.controller.Screen.print(AngleDiff(inertialInitial, inertial->heading()));
       }
 
-        // controls.controller.Screen.setCursor(2, 13);
-        // controls.controller.Screen.print(AngleDiff(inertialInitial, inertial->heading()));
       Stop();
       inertial->setHeading(0, vex::degrees);
-        // controls.controller.Screen.setCursor(1, 7);
-        // controls.controller.Screen.print(AngleDiff(inertialInitial, inertial->heading()));
-        // controls.controller.Screen.setCursor(2, 7);
-        // controls.controller.Screen.print(ReadLeft());
   }
+
   void Drivetrain::Spin(float revs, float power){
     float rInit = ReadRight(), lInit = ReadLeft();
     float curPow = power;
-    // leftMotors.SpinTo(revs, vex::rotationUnits::rev, false);
-    // rightMotors.SpinTo(revs, vex::rotationUnits::rev, true);
-      while(abs2(ReadRight() - rInit) < abs2(revs) || abs2(ReadLeft() - lInit) < abs2(revs)){
-        // curPow = Lerp(curPow, power, 0.075f);
-        SpinR((revs < 0) ? curPow : -curPow);
-        SpinL((revs < 0) ? curPow : -curPow);
-        // vex::this_thread::sleep_for(10);
-      }
-
-    //   Stop();
-
-    // controls.controller.Screen.setCursor(1, 1);
-    // controls.controller.Screen.print(ReadRight());
-    // controls.controller.Screen.setCursor(2, 1);
-    // controls.controller.Screen.print(ReadLeft());
-    // controls.controller.Screen.setCursor(3, 7);
-    // controls.controller.Screen.print(revs);
+    
+    while(abs2(ReadRight() - rInit) < abs2(revs) || abs2(ReadLeft() - lInit) < abs2(revs)){
+      SpinR((revs < 0) ? curPow : -curPow);
+      SpinL((revs < 0) ? curPow : -curPow);
+    }
   }
+
   void Drivetrain::UpdateHeading(){
       static float lastR = ReadRight(), lastL = ReadLeft();
       static float prevHeading = inertial->heading();
@@ -159,51 +132,51 @@ bool Joystick::isMoved(){
       
       _heading += dHeading * 1.0f + dMotor * 0.0f;
       _heading = curHeading;
-    // controls.controller.Screen.setCursor(2, 1);
-    // controls.controller.Screen.print("Heading: %.2f    ", _heading);
 
       lastR = curR;
       lastL = curL;
       prevHeading = curHeading;
   }
+
   void Drivetrain::SetInertial(vex::inertial* _inertial){
     inertial = _inertial;
   }
+
   void Drivetrain::ApplyPower(int lPow, int rPow){
-      curPowerL = (abs2(curPowerL) > abs2(lPow)) ? Lerp(curPowerL, lPow, 0.075f) : lPow;
-      curPowerR = (abs2(curPowerR) > abs2(rPow)) ? Lerp(curPowerR, rPow, 0.075f) : rPow;
-      leftMotors.Spin(vex::reverse, curPowerL, vex::rpm);
-      rightMotors.Spin(vex::forward, curPowerR, vex::rpm);
+    curPowerL = (abs2(curPowerL) > abs2(lPow)) ? Lerp(curPowerL, lPow, 0.075f) : lPow;
+    curPowerR = (abs2(curPowerR) > abs2(rPow)) ? Lerp(curPowerR, rPow, 0.075f) : rPow;
+    leftMotors.Spin(vex::reverse, curPowerL, vex::rpm);
+    rightMotors.Spin(vex::forward, curPowerR, vex::rpm);
   }
 
   void Drivetrain::DriveDist(float d, float sec){
-      float dd = d / wheelCirc;
-      float 
-          lSpeed = d / sec / 60 / wheelCirc, 
-          rSpeed = d / sec / 60 / wheelCirc;
+    float dd = d / wheelCirc;
+    float 
+      lSpeed = d / sec / 60 / wheelCirc, 
+      rSpeed = d / sec / 60 / wheelCirc;
 
-      SpinR(rSpeed);
-      SpinL(lSpeed);
+    SpinR(rSpeed);
+    SpinL(lSpeed);
 
-      while(ABS(ReadRight()) <= ABS(dd) || ABS(ReadLeft()) <= ABS(dd)) { }
+    while(ABS(ReadRight()) <= ABS(dd) || ABS(ReadLeft()) <= ABS(dd)) { }
   }
 
   void Drivetrain::DriveDist(float dL, float dR, float sec){
-      float 
-          lSpeed = dL / sec / 60 / wheelCirc, 
-          rSpeed = dR / sec / 60 / wheelCirc;
+    float 
+      lSpeed = dL / sec / 60 / wheelCirc, 
+      rSpeed = dR / sec / 60 / wheelCirc;
 
-      SpinR(rSpeed);
-      SpinL(lSpeed);
+    SpinR(rSpeed);
+    SpinL(lSpeed);
 
-      while(ReadRight() <= rSpeed || ReadLeft() <= lSpeed) { }
+    while(ReadRight() <= rSpeed || ReadLeft() <= lSpeed) { }
   }
   void Drivetrain::Stop(vex::brakeType br){
-      curPowerL = 0;
-      curPowerR = 0;
+    curPowerL = 0;
+    curPowerR = 0;
 
-      rightMotors.Stop(br);
-      leftMotors.Stop(br);
+    rightMotors.Stop(br);
+    leftMotors.Stop(br);
   }
   float Drivetrain::ReadLeft(){
     return leftMotors.Position(vex::rotationUnits::rev);
@@ -213,8 +186,8 @@ bool Joystick::isMoved(){
   }
 
   void Drivetrain::SetSpeed(float speed, vex::percentUnits units){
-      leftMotors.SetVelocity(speed, units);
-      rightMotors.SetVelocity(speed, units);
+    leftMotors.SetVelocity(speed, units);
+    rightMotors.SetVelocity(speed, units);
   }
 
   void Drivetrain::ResetPositions(){
@@ -261,27 +234,27 @@ bool Joystick::isMoved(){
   }
 
   float RotationPID::Update(float error, float dt){
-        // if(dt <= 0.001f || dt > 0.1f){
-        //     dt = 0.02f;  // Default to 50Hz
-        // }
-        
-        _integral += error * dt;
-        _integral = Clamp(_integral, -_integralMax, _integralMax);
-        
-        float derivative = (error - _prevError) / dt;
-        
-        //PPID
-        float P = m_P * error;
-        float I = m_I * _integral;
-        float D = m_D * derivative;
+    // if(dt <= 0.001f || dt > 0.1f){
+    //     dt = 0.02f;  // Default to 50Hz
+    // }
+    
+    _integral += error * dt;
+    _integral = Clamp(_integral, -_integralMax, _integralMax);
+    
+    float derivative = (error - _prevError) / dt;
+    
+    //PPID
+    float P = m_P * error;
+    float I = m_I * _integral;
+    float D = m_D * derivative;
 
-        
-        _prevError = error;
-        
-        float output = P + I + D;
-        
-        return Clamp2(output, -_maxOutput, _maxOutput);
-    }
+    
+    _prevError = error;
+    
+    float output = P + I + D;
+    
+    return Clamp2(output, -_maxOutput, _maxOutput);
+  }
 
   void RotationPID::SetTarget(float targ){
     _target = targ;
@@ -313,6 +286,28 @@ void Controller::Set(){
     Up.Set(controller.ButtonUp.pressing());
 }
 
+std::vector<PathPoint> pathFromFile(const char* filename) {
+  std::vector<PathPoint> points;
+
+  int32_t size = Brain.SDcard.size(filename);
+  if (size <= 0) return points;
+
+  uint8_t* buf = new uint8_t[size + 1];
+  Brain.SDcard.loadfile(filename, buf, size);
+  buf[size] = '\0';
+
+  char* line = strtok((char*)buf, "\n");
+  while (line != nullptr) {
+      PathPoint p = {{0, 0}, 0, 0};
+      sscanf(line, "%f,%f,%f,%f", &p.point.x, &p.point.y, &p.speed, &p.heading);
+      points.push_back(p);
+      line = strtok(nullptr, "\n");
+  }
+
+  delete[] buf;
+  return points;
+}
+
 void Button::Set(bool newValue){
     if(newValue != _value){
         if(_onPress && newValue){
@@ -323,25 +318,20 @@ void Button::Set(bool newValue){
     }
     _value = newValue;
 }
+
 float WrapAngle(float angle) {
   while (angle > 180) angle -= 360;   // 270° becomes -90°
   while (angle < -180) angle += 360;  // -200° becomes 160°
   return angle;
 }
+
 // SwervePod
   void SwervePod::SetPowers(Vector2 power, bool straight){
     float topPower = power.x - (power.y * MAX_ROTATION_POWER);
     float botPower = power.x + (power.y * MAX_ROTATION_POWER);
-
-    // if(!straight){
-    //   topPower += (power.y * MAX_ROTATION_POWER);
-    //   botPower -= (power.y * MAX_ROTATION_POWER);
-    // }else{
-    //   topPower = botPower;
-    // }
     
     float maxPower = max2(abs2(topPower), abs2(botPower));
-    if (abs2(maxPower) > MAX_MOTOR_POWER) {
+    if (maxPower > MAX_MOTOR_POWER) {
       topPower *= MAX_MOTOR_POWER / maxPower;
       botPower *= MAX_MOTOR_POWER / maxPower;
     }
@@ -351,11 +341,16 @@ float WrapAngle(float angle) {
     }else if(abs2(botPower) < 0.01f){
       bottom.stop(vex::brakeType::hold);
     }
-    top.spin(vex::forward, topPower, vex::pct);
-    bottom.spin(vex::reverse, botPower, vex::pct);
+
+    // top.spin(vex::forward, topPower, vex::pct);
+    // bottom.spin(vex::reverse, botPower, vex::pct);
+
+    top.spin(reversed ? vex::reverse : vex::forward, topPower, vex::pct);
+    bottom.spin(reversed ? vex::forward : vex::reverse, botPower, vex::pct);
   }
+
   void SwervePod::GoToVector(Vector2 targ, bool canForward){
-    static float start = (vex::timer::system() / 1000.0f), end;
+    static float start = (vex::timer::system() / 1000.0f);
     float curTime = (vex::timer::system() / 1000.0f);
     float dt = curTime - lastTime;
     lastTime = curTime;
@@ -365,56 +360,18 @@ float WrapAngle(float angle) {
     float curAngle = GetAngle();
     float move = targ.GetMagnitude();
     float angl = targ.GetAngle();
-    float angleDiff = AngleDiff(angl, curAngle);
+    float angleDiff = AngleDiff(WrapAngle(angl + (reversed ? 180 : 0)), curAngle);
 
-    if(!cosplineMode){
-      if(std::abs(angleDiff) > REVERSE_ENTER && !onShortest){
-        reversed = !reversed;
-        onShortest = true;
-      }else if (std::abs(angleDiff) < REVERSE_EXIT){
-        onShortest = false;
-      }
-      if(reversed){
-        move = -move;
-        angl = WrapAngle(angl + 180);
-        angleDiff = AngleDiff(angl, curAngle);
-      }
-    }else{
-      float alignmentFactor = std::cos(angleDiff * M_PI / 180.0);
-      move *= fmax(alignmentFactor, 0.0);
+    if(abs2(angleDiff) > 90){
+      reversed = !reversed;
     }
     
+    angl = WrapAngle(angl + (reversed ? 180 : 0));
+    angleDiff = AngleDiff(angl, curAngle);
 
-    float rotation = rotationPID.Update(angleDiff, dt);
-
-    if(abs2(angleDiff) <= ROTATION_ERROR){
-      if(!canForward) move = 0;
-      if(!atTarget) {
-        Brake(vex::brakeType::hold);
-        end = curTime;
-        atTarget = true;
-      }
-      rotation = 0;
-    }else{
-      move = 0;
-      if(atTarget){
-        start = curTime;
-        atTarget = false;
-      }
-    }
+    float rotation = rotationPID.Update(angleDiff, dt) * (abs2(angleDiff/90.0f) * 3);
     
-    Vector2 powerVector(move, rotation);
-
-    if(screen < 4){
-      controls.controller.Screen.setCursor(screen, 1);
-      controls.controller.Screen.print("%.4f   ", rotation);
-      // controls.controller.Screen.setCursor(screen + 1, 1);
-      // controls.controller.Screen.print("%.2f->%.2f|%.2f    ", curAngle, angl, angleDiff);
-      if(atTarget){
-        controls.controller.Screen.setCursor(screen + 2, 1);
-        // controls.controller.Screen.print("Took: %.2fs    ", end - start);
-      }
-    }
+    Vector2 powerVector(reversed ? move : move, rotation);
 
     SetPowers(powerVector, canForward);
   }
@@ -436,28 +393,62 @@ float WrapAngle(float angle) {
     }
     return Clamp(angleDiff / MAX_ROTATION_ANGLE, -1.0f, 1.0f);
   }
+
   void SwervePod::SetPIDVariables(float P, float I, float D){
     rotationPID.SetVariables(P, I, D);
   }
+
   void SwervePod::Brake(vex::brakeType br){
     top.stop(br);
     bottom.stop(br);
   }
+
   float SwervePod::GetAngle(){
     float angle = rotation.angle() + rotationOffset;
     while(angle > 180) angle -= 360;
     while(angle < -180) angle += 360;
     return angle;
-  };
+  }
+
+  bool SwervePod::IsMoving(){
+    return (abs2(top.velocity(vex::velocityUnits::pct)) <= 0.01f && abs2(bottom.velocity(vex::velocityUnits::pct)) <= 0.01f);
+  }
+
   void SwervePod::SetRotationOffset(float _off){
     rotationOffset = _off;
-  };
+  }
   
   const Vector2 SwervePod::MOTOR_TOP_VECTOR = Vector2(1/std::sqrt(2), 1/std::sqrt(2));
   const Vector2 SwervePod::MOTOR_BOT_VECTOR = Vector2(-1/std::sqrt(2), 1/std::sqrt(2));
 //
 
 // SwerveDrive
+  void SwerveDrive::UpdatePosition(float dt){
+    float x = inertial.acceleration(vex::axisType::xaxis);
+    float y = inertial.acceleration(vex::axisType::yaxis);
+    if(abs2(x) < .1f) x = 0;
+    if(abs2(y) < .1f) y = 0;
+
+    currentAccel = Vector2(
+      x * 32.2f * 12, 
+      y * 32.2f * 12
+    );
+    currentVel += currentAccel * dt;
+    if(
+      !frontLeft.IsMoving() && !frontRight.IsMoving() &&
+       !backLeft.IsMoving() && !backRight.IsMoving()
+    ){
+      currentVel = Vector2(0, 0);
+    }
+    currentPos += currentVel * dt;
+
+    // controls.controller.Screen.setCursor(1, 1);
+    // controls.controller.Screen.print("p:(%.2f, %.2f)    ", currentPos.x, currentPos.y);
+    // controls.controller.Screen.setCursor(2, 1);
+    // controls.controller.Screen.print("v:(%.2f, %.2f)    ", currentVel.x, currentVel.y);
+    // controls.controller.Screen.setCursor(3, 1);
+    // controls.controller.Screen.print("a:(%.2f, %.2f)    ", currentAccel.x, currentAccel.y);
+  }
   void SwerveDrive::Drive(Vector2 driveVector, float rotationSpeed){
     static const Vector2 FL_pos(-trackwidth/2,  wheelbase/2);
     static const Vector2 FR_pos( trackwidth/2,  wheelbase/2);
@@ -491,31 +482,104 @@ float WrapAngle(float angle) {
       BR_target *= scale;
     }
     bool canForward = 
-      frontLeft.atTarget && frontRight.atTarget && 
-      backLeft.atTarget && backRight.atTarget || cospline;
+      (frontLeft.atTarget && frontRight.atTarget && 
+      backLeft.atTarget && backRight.atTarget) || cospline;
 
     frontLeft.GoToVector(FL_target, canForward);
     frontRight.GoToVector(FR_target, canForward);
     backLeft.GoToVector(BL_target, canForward);
     backRight.GoToVector(BR_target, canForward);
+    
   }
+
   void SwerveDrive::Stop(vex::brakeType br){
     frontLeft.Brake(br); frontRight.Brake(br);
     backLeft.Brake(br);  backRight.Brake(br);
   }
+
+  void SwerveDrive::AutonMove(PathPoint pp){
+    static const Vector2 FL_pos( std::sqrt(2)/2, std::sqrt(2)/2);
+    static const Vector2 FR_pos( std::sqrt(2)/2, -std::sqrt(2)/2);
+    static const Vector2 BL_pos(-std::sqrt(2)/2, std::sqrt(2)/2);
+    static const Vector2 BR_pos(-std::sqrt(2)/2, -std::sqrt(2)/2);
+
+    frontLeft.GoToVector(FL_pos * (FL_pos * pp.point));
+    frontRight.GoToVector(FR_pos * (FR_pos * pp.point));
+    backLeft.GoToVector(BL_pos * (BL_pos * pp.point));
+    backRight.GoToVector(BR_pos * (BR_pos * pp.point));
+    controls.controller.Screen.setCursor(2, 1);
+    controls.controller.Screen.print("(%.2f, %.2f), (%.2f, %.2f)", FL_pos.x, FL_pos.y, FR_pos.x, FR_pos.y);
+    // controls.controller.Screen.setCursor(3, 1);
+    // controls.controller.Screen.print("(%.2f, %.2f), (%.2f, %.2f)", BL_pos.x, BL_pos.y, BR_pos.x, BR_pos.y);
+  }
+
   void SwerveDrive::SetRotationOffsets(float fl, float fr, float bl, float br){
     frontLeft.SetRotationOffset(fl); frontRight.SetRotationOffset(fr);
     backLeft.SetRotationOffset(bl); backRight.SetRotationOffset(br);
 
     frontLeft.screen  =  frontLeft.rotationPID.screen = 4;
-    frontRight.screen = frontRight.rotationPID.screen = 1;
-    backLeft.screen   =   backLeft.rotationPID.screen = 2;
-    backRight.screen  =  backRight.rotationPID.screen = 3;
+    frontRight.screen = frontRight.rotationPID.screen = 4;
+    backLeft.screen   =   backLeft.rotationPID.screen = 4;
+    backRight.screen  =  backRight.rotationPID.screen = 4;
 
     frontLeft.rotationPID.Prime(frontLeft.GetAngle(), frontLeft.GetAngle());
     frontRight.rotationPID.Prime(frontRight.GetAngle(), frontRight.GetAngle());
     backLeft.rotationPID.Prime(backLeft.GetAngle(), backLeft.GetAngle());
     backRight.rotationPID.Prime(backRight.GetAngle(), backRight.GetAngle());
+  }
+
+  void SwerveDrive::FaceDirection(float direction){
+    static RotationPID pid(0.04f, 0.0f, 0.004f);
+    float start = (vex::timer::system() / 1000.0f);
+    float lastTime = start;
+    float curTime = (vex::timer::system() / 1000.0f);
+    float dt = curTime - lastTime;
+    float aDiff = AngleDiff(inertial.heading(), direction);
+
+    while(aDiff > 0.5f){
+      curTime = (vex::timer::system() / 1000.0f);
+      dt = curTime - lastTime;
+      lastTime = curTime;
+
+      float power = pid.Update(aDiff, dt);
+
+      Drive(Vector2::zero, power * 100);
+
+      aDiff = AngleDiff(inertial.heading(), direction);
+    }
+  }
+
+  void SwerveDrive::GoToPoint(){
+    static float start = (vex::timer::system() / 1000.0f);
+    static float lastTime;
+    float curTime = (vex::timer::system() / 1000.0f);
+    float dt = curTime - lastTime;
+
+    int count = 0;
+    Vector2 direction;
+    currentPos = points.front().point;
+    for(PathPoint p : points){
+      direction = Vector2(p.point, currentPos);
+      // controls.controller.Screen.setCursor(2, 1);
+      // controls.controller.Screen.print("%.2f", direction.GetMagnitude());
+      while(direction.GetMagnitude() > 0.5f){
+        curTime = (vex::timer::system() / 1000.0f);
+        dt = curTime - lastTime;
+        lastTime = curTime;
+
+        if(!comp.isAutonomous()){
+          return;
+        }
+        controls.controller.Screen.setCursor(3, 1);
+        controls.controller.Screen.print("(%.2f, %.2f)                 ", currentPos.x, currentPos.y);
+        AutonMove(p);
+        UpdatePosition(dt);
+        direction = Vector2(p.point, currentPos);
+        if(!comp.isAutonomous()){
+          return;
+        }
+      }
+    }
   }
 //
 

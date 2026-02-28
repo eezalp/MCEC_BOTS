@@ -5,109 +5,51 @@
 #include <cmath>
 
 struct Vector2{
-    public:
-        float x, y;
+  public:
+    float x, y;
 
-        Vector2(float _x, float _y) : x(_x), y(_y) { }
-        Vector2(Vector2 direction, float magnitude){
-            direction.Normalize();
-            direction *= magnitude;
-            x = direction.x;
-            y = direction.y;
-        }
-        Vector2() : x(0), y(0) { }
+    Vector2(float _x, float _y) : x(_x), y(_y) { }
+    Vector2(Vector2 direction, float magnitude);
+    Vector2(Vector2 final, Vector2 initial);
+    Vector2() : x(0), y(0) { }
+    float GetMagnitude();
 
-        float inline GetMagnitude(){
-            return std::sqrt(x*x + y*y);
-        }
+    Vector2& Rotate(float deg);
 
-        Vector2& Rotate(float deg){
-            float r = deg * (M_PI / 180.0f);
-            float newX = x * std::cos(r) - y * std::sin(r);
-            y = x * std::sin(r) + y * std::cos(r);
-            x = newX;
-            return *this;
-        }
+    float GetAngle();
 
-        float inline GetAngle(){
-            return std::atan2(y, x) * (180.0f/M_PI);
-        }
+    Vector2& Normalize();
 
-        Vector2& Normalize(){
-            float mag = GetMagnitude();
-            x /= mag;
-            y /= mag;
-            return *this;
-        }
-
-        // @param destination: The destination vector
-        static Vector2 Project(Vector2 source, Vector2 destination){
-            Vector2 res = destination.Normalize() * ( (source * destination) / destination.GetMagnitude());
-            return res; 
-        }
-        Vector2& Project(Vector2 destination){
-            Vector2 source = Vector2(x, y);
-            source = destination.Normalize() * ( (source * destination) / destination.GetMagnitude());
-            x = source.x;
-            y = source.y;
-            return *this;
-        }
-
-        // Operators
-            Vector2& operator*=(const float scalar){
-                this->x *= scalar;
-                this->y *= scalar;
-                return *this;
-            };
-            Vector2& operator/=(const float scalar){ 
-                this->x /= scalar;
-                this->y /= scalar;
-                return *this;
-            }
-        //
-        // Constant Operators
-            Vector2 operator*(const float scalar) const{
-                Vector2 res(this->x, this->y);
-                res.x *= scalar;
-                res.y *= scalar;
-                return res;
-            };
-            Vector2 operator/(const float scalar) const{ 
-                Vector2 res(this->x, this->y);
-                res.x /= scalar;
-                res.y /= scalar;
-                return res;
-            }
-            Vector2 operator+(const Vector2 b) const{
-                Vector2 res(this->x, this->y);
-                res.x += b.x;
-                res.y += b.y;
-                return res;
-            }
-            Vector2 operator-(const Vector2 b) const{
-                Vector2 res(this->x, this->y);
-                res.x -= b.x;
-                res.y -= b.y;
-                return res;
-            }
-
-            // Dot product
-            float operator*(const Vector2 b) const{
-                return (x * b.x) + (y * b.y);
-            }
-            // Cross product
-            float operator%(const Vector2 b) const{
-                return (x * b.y) - (b.x * y);
-            }
-        //
-
+    // @param destination: The destination vector
+    static Vector2 Project(Vector2 source, Vector2 destination){
+      Vector2 res = destination.Normalize() * ( (source * destination) / destination.GetMagnitude());
+      return res; 
+    }
+    Vector2& Project(Vector2 destination);
+    // Operators
+    Vector2& operator*=(const float scalar);
+    Vector2& operator/=(const float scalar);
+    Vector2& operator+=(const Vector2 b);
+    
+    // Constant Operators
+    Vector2 operator*(const float scalar) const;
+    Vector2 operator/(const float scalar) const;
+    Vector2 operator+(const Vector2 b) const;
+    Vector2 operator-(const Vector2 b) const;
+    // Dot product
+    float operator*(const Vector2 b) const;
+    // Cross product
+    float operator%(const Vector2 b) const;
+    //
+    static const Vector2 zero, up, down, left, right;
     private:
 };
 
+
 struct Vector3{
-    public:
-        float x, y, z;
-    private:
+  public:
+    float x, y, z;
+  private:
 };
 
 #endif
