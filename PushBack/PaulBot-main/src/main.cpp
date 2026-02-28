@@ -62,6 +62,13 @@ void Undescore(){
   descore.spinToPosition(175, degrees);
   Controller1.ButtonB.pressed(Descore);
 }
+
+bool descoreUp = false;
+void DescoreToggle(){
+  descoreUp = !descore;
+  descore.spinToPosition(descoreUp ? 175 : 140, degrees);
+}
+
 void DescoreStore(){
   descore.spinToPosition(20, degrees);
 }
@@ -188,9 +195,9 @@ int main() {
 //   vex::Gif gif("world.gif", 200, 0 );
 //   vex::Gif gif1 ("hapy.gif", 0, 0);
 
-  Controller1.ButtonB.pressed(Descore);
   Controller1.ButtonLeft.pressed(DescoreStore);
   Controller1.ButtonRight.pressed(Undescore);
+  Controller1.ButtonB.pressed(DescoreToggle);
 
 
   Controller1.ButtonA.pressed(shoot);
