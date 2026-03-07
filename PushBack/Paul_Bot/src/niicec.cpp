@@ -149,6 +149,23 @@ void XDrive::setTarget(float controllerX, float controllerY, float turning) {
     }
 }
 
+float wheelDiameter = 2.75;
+
+//@param distance 
+void XDrive::driveForward(int distance){
+    int trueDistance = distance * cos(M_1_PI / 4);
+    while((Fleft.distance() + Fright.distance() + Bleft.distance() + Bright.distance()) / 4 < trueDistance){
+        setTarget(0, 1, 0);
+    }
+    Stop()
+}
+
+void XDrive::turnInPlace(int degrees){
+    while(fabs(imu.heading() - degrees) > 1){
+        setTarget(0, 0, )
+    }
+}
+
 void XDrive::runPath(const char* path) {
     auto points = pathFromFile(path);
     for (int i = 0; i < (int)points.size() - 1; i++) {
