@@ -324,9 +324,9 @@ namespace MCEC{
       
       SwervePod frontLeft, frontRight, backLeft, backRight;
       std::vector<PathPoint> points;
+      bool canForward = true;
     private:
       const static int MAX_MODULE_OUTPUT = 100;
-      bool cospline = false;
       float wheelbase  = (12.75f + 11.75f) / 2;
       float trackwidth = (14.125f + 13.125f) / 2;
       Vector2 currentVel, currentAccel;

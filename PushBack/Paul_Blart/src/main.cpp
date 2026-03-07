@@ -82,12 +82,14 @@ MCEC::Controller controls = MCEC::Controller();
 vex::digital_out turret(Brain.ThreeWirePort.A);
 vex::digital_out shiv(Brain.ThreeWirePort.C);
 
+float dt;
+bool turretUp = false;
+bool shivUp = false;
 
 void StopMoving(){
   drivetrain.Stop(vex::brakeType::hold);
 }
 
-float dt;
 
 void PosUpdate(){
   static float start = (vex::timer::system() / 1000.0f), end;
@@ -155,22 +157,27 @@ void IntakeStop(){
 void ShivUp();
 
 void ShivDown(){
-  shiv = false;
+  if(turretUp) return;
   controls.A.SetOnPress(ShivUp);
+  shivUp = false;
+  shiv = true;
 }
 void ShivUp(){
-  shiv = true;
   controls.A.SetOnPress(ShivDown);
+  shivUp = true;
+  shiv = false;
 }
 
 void TurretDown();
 
 void TurretUp(){
+  if(!shivUp) return;
   turret.set(true);
-
+  turretUp = true;
 }
 void TurretDown(){
   turret.set(false);
+  turretUp = false;
 }
 
 void Driver(){
@@ -191,28 +198,28 @@ void Auton(){
 
   drivetrain.points = {
     //Put the path planner points here
-    {{-61.634, 18.23}, 89.752},
-    {{-60.747, 20.022}, 86.875},
-    {{-59.861, 21.815}, 83.901},
-    {{-58.974, 23.608}, 80.817},
-    {{-58.087, 25.401}, 77.61},
-    {{-57.2, 27.193}, 74.265},
-    {{-56.314, 28.986}, 70.763},
-    {{-55.427, 30.779}, 67.077},
-    {{-54.54, 32.571}, 63.177},
-    {{-53.654, 34.364}, 59.02},
-    {{-52.767, 36.157}, 54.547},
-    {{-51.88, 37.949}, 49.672},
-    {{-50.993, 39.742}, 44.264},
-    {{-50.107, 41.535}, 38.096},
-    {{-49.22, 43.327}, 30.714},
-    {{-48.333, 45.12}, 20.865},
-    {{-47.573, 46.656}, 0},
-    {{-47.573, 46.656}, 0},
-    {{-38.706, 64.583}, 0}
+    // {{-61.634, 18.23}, 89.752},
+    // {{-60.747, 20.022}, 86.875},
+    // {{-59.861, 21.815}, 83.901},
+    // {{-58.974, 23.608}, 80.817},
+    // {{-58.087, 25.401}, 77.61},
+    // {{-57.2, 27.193}, 74.265},
+    // {{-56.314, 28.986}, 70.763},
+    // {{-55.427, 30.779}, 67.077},
+    // {{-54.54, 32.571}, 63.177},
+    // {{-53.654, 34.364}, 59.02},
+    // {{-52.767, 36.157}, 54.547},
+    // {{-51.88, 37.949}, 49.672},
+    // {{-50.993, 39.742}, 44.264},
+    // {{-50.107, 41.535}, 38.096},
+    // {{-49.22, 43.327}, 30.714},
+    // {{-48.333, 45.12}, 20.865},
+    // {{-47.573, 46.656}, 0},
+    // {{-47.573, 46.656}, 0},
+    // {{-38.706, 64.583}, 0}
   };
 
-  drivetrain.GoToPoint();
+  // drivetrain.GoToPoint();
 }
 
 void FaceDriver(){
@@ -231,6 +238,14 @@ void FaceRight(){
   drivetrain.FaceDirection(270);
 }
 
+void DisableForward(){
+  drivetrain.canForward = false;
+}
+
+void EnableForward(){
+  drivetrain.canForward = true;
+}
+
 void SetControls(){
   controls.L2.SetOnPress(IntakeGo);
   controls.L1.SetOnPress(IntakeStore);
@@ -241,7 +256,9 @@ void SetControls(){
   controls.Up.SetOnPress(TurretUp);
 
   controls.A.SetOnPress(ShivDown);
-  controls.B.SetOnPress(Auton);
+
+  controls.B.SetOnPress(DisableForward);
+  controls.B.SetOnRelease(EnableForward);
 
   // controls.Down.SetOnPress(FaceDriver);
   // controls.Up.SetOnPress(FaceOpponent);
@@ -268,7 +285,7 @@ void SetupFieldControl(){
   if(!comp.isFieldControl()){
     controls.controller.Screen.clearScreen();
     controls.controller.Screen.print("Field Control");
-        comp.autonomous(Auton);
+      comp.autonomous(Auton);
   }
 }
 
@@ -303,7 +320,6 @@ int main(){
   // controls.controller.Screen.setCursor(3, 1);
   // controls.controller.Screen.print("%.2f  %.2f", drivetrain.backLeft.rotation.angle(), drivetrain.backRight.rotation.angle());
 
-  // controls.controller.Screen.clearScreefFn();
   controls.controller.rumble(".....");
   while(1) {
     if(!comp.isFieldControl()){

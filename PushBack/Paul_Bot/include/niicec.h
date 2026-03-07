@@ -58,6 +58,8 @@ class XDrive {
     void setVel(double _LF, double _LB, double _RF, double _RB);
 
     void Stop();
+    void driveForward(int);
+    void turnInPlace(int);
 
     
 public:

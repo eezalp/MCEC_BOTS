@@ -87,27 +87,27 @@ void XDrive::setVel(double _LF, double _LB, double _RF, double _RB) {
     RF = _RF;
     RB = _RB;
 
-    // Fleft.spin(LF >= 0 ? fwd : reverse, fabs(LF), pct);
-    // Bleft.spin(LB >= 0 ? fwd : reverse, fabs(LB), pct);
-    // Fright.spin(RF >= 0 ? fwd : reverse, fabs(RF), pct);
-    // Bright.spin(RB >= 0 ? fwd : reverse, fabs(RB), pct);
+    Fleft.spin(LF >= 0 ? fwd : reverse, fabs(LF), pct);
+    Bleft.spin(LB >= 0 ? fwd : reverse, fabs(LB), pct);
+    Fright.spin(RF >= 0 ? fwd : reverse, fabs(RF), pct);
+    Bright.spin(RB >= 0 ? fwd : reverse, fabs(RB), pct);
 }
 
 void XDrive::UpdateMotorSpeeds(){
-    double _LF = Lerp(Fleft.velocity(velocityUnits::pct),  LF, 0.8f);
-    double _RF = Lerp(Fright.velocity(velocityUnits::pct), RF, 0.8f);
-    double _LB = Lerp(Bleft.velocity(velocityUnits::pct),  LB, 0.8f);
-    double _RB = Lerp(Bright.velocity(velocityUnits::pct), RB, 0.8f);
+    // double _LF = Lerp(Fleft.velocity(velocityUnits::pct),  LF, 0.8f);
+    // double _RF = Lerp(Fright.velocity(velocityUnits::pct), RF, 0.8f);
+    // double _LB = Lerp(Bleft.velocity(velocityUnits::pct),  LB, 0.8f);
+    // double _RB = Lerp(Bright.velocity(velocityUnits::pct), RB, 0.8f);
 
-    if(LF == 0) _LF = 0;
-    if(RF == 0) _RF = 0;
-    if(LB == 0) _LB = 0;
-    if(RB == 0) _RB = 0;
+    // if(LF == 0) _LF = 0;
+    // if(RF == 0) _RF = 0;
+    // if(LB == 0) _LB = 0;
+    // if(RB == 0) _RB = 0;
 
-    Fleft.spin(_LF >= 0 ? fwd : reverse, fabs(_LF), pct);
-    Bleft.spin(_LB >= 0 ? fwd : reverse, fabs(_LB), pct);
-    Fright.spin(_RF >= 0 ? fwd : reverse, fabs(_RF), pct);
-    Bright.spin(_RB >= 0 ? fwd : reverse, fabs(_RB), pct);
+    // Fleft.spin(_LF >= 0 ? fwd : reverse, fabs(_LF), pct);
+    // Bleft.spin(_LB >= 0 ? fwd : reverse, fabs(_LB), pct);
+    // Fright.spin(_RF >= 0 ? fwd : reverse, fabs(_RF), pct);
+    // Bright.spin(_RB >= 0 ? fwd : reverse, fabs(_RB), pct);
 }
 
 void XDrive::Stop(){
@@ -129,6 +129,7 @@ void XDrive::setTarget(float controllerX, float controllerY, float turning) {
     float fieldX = controllerX * cos(h) - controllerY * sin(h);
     float fieldY = controllerY * cos(h) + controllerX * sin(h);
     Vector2 target(fieldX, fieldY);
+    // Vector2 target(controllerX, controllerY);
     float correction = 0;
     if (turning != 0) {
         targetHeading = imu->rotation();
@@ -146,23 +147,6 @@ void XDrive::setTarget(float controllerX, float controllerY, float turning) {
         );
     } else {
         Stop();
-    }
-}
-
-float wheelDiameter = 2.75;
-
-//@param distance 
-void XDrive::driveForward(int distance){
-    int trueDistance = distance * cos(M_1_PI / 4);
-    while((Fleft.distance() + Fright.distance() + Bleft.distance() + Bright.distance()) / 4 < trueDistance){
-        setTarget(0, 1, 0);
-    }
-    Stop()
-}
-
-void XDrive::turnInPlace(int degrees){
-    while(fabs(imu.heading() - degrees) > 1){
-        setTarget(0, 0, )
     }
 }
 
@@ -185,4 +169,32 @@ void XDrive::runPath(const char* path) {
         wait(15, msec);
     }
     setVel(0, 0, 0, 0);
+}
+
+
+float wheelDiameter = 2.75;
+
+//@param distance 
+void XDrive::driveForward(int distance){
+    int trueDistance = distance * cos(M_1_PI / 4);
+    float FLStart =  Fleft.position(rotationUnits::degrees) * (M_PI / 180.0f);
+    float FRStart = Fright.position(rotationUnits::degrees) * (M_PI / 180.0f);
+    float BLStart =  Bleft.position(rotationUnits::degrees) * (M_PI / 180.0f);
+    float BRStart = Bright.position(rotationUnits::degrees) * (M_PI / 180.0f);
+    while(
+        (
+            (Fleft.position(rotationUnits::degrees) * (M_PI / 180.0f) - FLStart) + 
+            (Fright.position(rotationUnits::degrees) * (M_PI / 180.0f) - FRStart) + 
+            (Bleft.position(rotationUnits::degrees) * (M_PI / 180.0f) - BLStart) + 
+            (Bright.position(rotationUnits::degrees) * (M_PI / 180.0f) - BRStart)
+        ) / 4 < trueDistance){
+        setTarget(0, 1, 0);
+    }
+    Stop();
+}
+
+void XDrive::turnInPlace(int degrees){
+    while(fabs(imu->heading() - degrees) > 1){
+        setTarget(0, 0, 1)
+    }
 }

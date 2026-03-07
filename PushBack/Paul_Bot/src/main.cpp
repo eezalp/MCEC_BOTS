@@ -107,7 +107,7 @@ void shoot(){
 
     //lever.spinFor(fwd, -distance * 1.045, degrees, true);
    lever.spin(fwd, 100, pct);
-  while(abs(lever.velocity(pct) > 0.5) || abs(lever.position(degrees)/distance) > 0.5f  && !Controller1.ButtonX.pressing()){
+  while((abs(lever.velocity(pct) > 0.5) || abs(lever.position(degrees)/distance) > 0.5f)  && !Controller1.ButtonX.pressing()){
     lever.spin(fwd, 100, pct);
   }
   lever.stop();
@@ -150,13 +150,13 @@ void DriverLoop(){
 
 //turning set to 35% at driver request
   float scaleFactor = Controller1.ButtonR2.pressing() ? 0.5f : 1;
-  xdrive.setTarget((isReversed ? -1 : 1) * controllerX * scaleFactor, (isReversed ? -1 : 1) * controllerY * scaleFactor, turning*0.35f);
+  xdrive.setTarget((isReversed ? -1 : 1) * controllerX * scaleFactor, (isReversed ? -1 : 1) * controllerY * scaleFactor, turning*0.6f);
 
 
-  Controller1.Screen.setCursor(2,1);
-  Controller1.Screen.print("%0.2f  %0.2f ", imu.orientation(orientationType::roll, rotationUnits::deg), imu.orientation(orientationType::pitch, rotationUnits::deg));
-  Controller1.Screen.setCursor(3,1);
-  Controller1.Screen.print("%0.2f   ", imu.orientation(orientationType::yaw, rotationUnits::deg));
+  // Controller1.Screen.setCursor(2,1);
+  // Controller1.Screen.print("%0.2f  %0.2f ", imu.orientation(orientationType::roll, rotationUnits::deg), imu.orientation(orientationType::pitch, rotationUnits::deg));
+  // Controller1.Screen.setCursor(3,1);
+  // Controller1.Screen.print("%0.2f   ", imu.orientation(orientationType::yaw, rotationUnits::deg));
 
   xdrive.UpdateMotorSpeeds();
 

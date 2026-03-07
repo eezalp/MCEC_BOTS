@@ -357,21 +357,43 @@ float WrapAngle(float angle) {
 
     float curAngle = GetAngle();
     float move = targ.GetMagnitude();
-    float angl = targ.GetAngle();
-    
-    float angleDiffForward  = AngleDiff(WrapAngle(angl), curAngle);
-    float angleDiffReversed = AngleDiff(WrapAngle(angl + 180), curAngle);
+    float angl = (targ.GetAngle());
 
-    // if(angl != prevTargAngle){
-    //   reversed = (angleDiffReversed < angleDiffForward - 5.0f);
+    float angleDiffForward = 0;
+
+    static int test = 0;
+    
+    static const int deadzoneAngle = 95;
+
+    // if(abs2(AngleDiff(WrapAngle(angl), WrapAngle(prevTargAngle))) > 50.0f){
+      angleDiffForward  = (AngleDiff(WrapAngle(angl), WrapAngle(curAngle)));
+      // float angleDiffReversed = (AngleDiff(WrapAngle(angl + 180), curAngle));
+      
+      if (angleDiffForward > deadzoneAngle || angleDiffForward < -deadzoneAngle)
+        reversed = true;
+      else if(angleDiffForward < deadzoneAngle || angleDiffForward > -deadzoneAngle)
+        reversed = false;
+      // controls.controller.Screen.setCursor(2, 1);
+      // controls.controller.Screen.print("%.1f      ", angl);
+      // controls.controller.Screen.setCursor(3, 1);
+      // controls.controller.Screen.print("%d      ", ++test);
     // }
+    
+    float angleDiff = AngleDiff(WrapAngle(angl + (reversed ? 180 : 0)), WrapAngle(curAngle));
+
+    float rotation = rotationPID.Update(angleDiff, dt) * std::sqrt(abs2(angleDiff/90.0f) * 2) * (reversed ? -1 : 1);
 
     
-    float angleDiff = AngleDiff(WrapAngle(angl + (reversed ? 180 : 0)), curAngle);
+      if(screen < 4){
+        // controls.controller.Screen.setCursor(1, 1);
+        // controls.controller.Screen.print("%.1f %.1f    ", 
+        //     angleDiffForward, angleDiff);
+        // controls.controller.Screen.setCursor(2, 1);
+        // controls.controller.Screen.print("%.1f %.1f %d      ", 
+        //     curAngle, angl, reversed);
+      }
 
-    float rotation = rotationPID.Update(angleDiff, dt) * std::sqrt(abs2(angleDiff/90.0f) * 2);
-    
-    Vector2 powerVector(move, rotation);
+    Vector2 powerVector(canForward ? move : 0, rotation);
 
     SetPowers(powerVector, canForward);
 
@@ -389,7 +411,7 @@ float WrapAngle(float angle) {
   }
 
   float SwervePod::GetAngle(){
-    float angle = rotation.angle() + rotationOffset;
+    float angle = rotation.angle() + rotationOffset;// + (reversed ? 180 : 0);
     while(angle > 180) angle -= 360;
     while(angle < -180) angle += 360;
     return angle;
@@ -542,9 +564,6 @@ float WrapAngle(float angle) {
       BL_target *= scale;
       BR_target *= scale;
     }
-    bool canForward = 
-      (frontLeft.atTarget && frontRight.atTarget && 
-      backLeft.atTarget && backRight.atTarget) || cospline;
 
     frontLeft.GoToVector(FL_target, canForward);
     frontRight.GoToVector(FR_target, canForward);
@@ -631,17 +650,17 @@ float WrapAngle(float angle) {
         dt = curTime - lastTime;
         lastTime = curTime;
 
-        // if(!comp.isAutonomous()){
-        //   return;
-        // }
+        if(!comp.isAutonomous()){
+          return;
+        }
         AutonMove(p);
         UpdatePosition(dt);
         controls.controller.Screen.setCursor(3, 1);
-        controls.controller.Screen.print("%.2f, %.2f", p.point.x, p.point.y);
+        controls.controller.Screen.print("%.2f, %.2f, %.2f", direction.x, direction.y, direction.GetMagnitude());
         direction = Vector2(p.point, currentPos);
-        // if(!comp.isAutonomous()){
-        //   return;
-        // }
+        if(!comp.isAutonomous()){
+          return;
+        }
       }
     }
   }
