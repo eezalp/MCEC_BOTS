@@ -232,24 +232,50 @@ namespace MCEC{
     void Set();
   };
 
+  class OdomPod{
+    public:
+      OdomPod(Vector2 _offset, int port, float _r) : offset(_offset), encoder(port), wheelRadius(_r) {
+        firstPos = lastPos = encoder.angle();
+      }
+      
+      float GetDeltaDistance(){
+        float curPos = encoder.angle();
+        float delta = AngleDiff(curPos, lastPos);
+
+        lastPos = curPos;
+
+        return delta * wheelRadius * (M_PI/180.0f);
+      }
+      float GetAbsDistance(){
+        float curPos = encoder.angle();
+        return AngleDiff(curPos, firstPos) * (M_PI/180.0f) * wheelRadius;
+      }
+      Vector2 offset;
+    private:
+      vex::rotation encoder;
+      float lastPos;
+      float firstPos;
+      float wheelRadius;
+  };
+
   class SwervePod{
     public:
       int screen = 1;
       RotationPID rotationPID;
       vex::rotation rotation;
+      Vector2 relPos;
       const static int MAX_MOTOR_POWER = 100;
       const static constexpr float MAX_ROTATION_POWER = 100.0f;
       const static constexpr float MAX_ROTATION_ANGLE = 90;
-      const static constexpr float ROTATION_ERROR = 7.5f;
-      const static int REVERSE_ENTER = 45;
-      const static int REVERSE_EXIT = 39;
       bool cosplineMode = false;
       bool atTarget = false;
+      float motorRatio = 1;
       void SetPowers(Vector2 power, bool straight = false);
       void GoToVector(Vector2 targ, bool canForward = false);
-      float GetPivot(Vector2 targ, float angle);
       void Brake(vex::brakeType br);
       float GetAngle();
+      float CalcWub(float);
+      Vector2 GetTraveled(float dt, float wub);
       void SetRotationOffset(float _off);
       void SetPIDVariables(float P, float I, float D);
       bool IsMoving();
@@ -263,6 +289,7 @@ namespace MCEC{
       vex::motor top, bottom;
       bool onShortest = false, reversed = false;
       float rotationOffset = 0.0f;
+      float delTop, delBot;
   };
 
   class SwerveDrive {
@@ -272,10 +299,15 @@ namespace MCEC{
         int32_t FLt, int32_t FLb, int32_t FLr,
         int32_t FRt, int32_t FRb, int32_t FRr,
         int32_t BLt, int32_t BLb, int32_t BLr,
-        int32_t BRt, int32_t BRb, int32_t BRr
+        int32_t BRt, int32_t BRb, int32_t BRr,
+        Vector2 forwardOffset, int32_t forwardPort,
+        Vector2 lateralOffset, int32_t lateralPort,
+        float odomWheelRadius
       ) :
         frontLeft(FLt, FLb, FLr), frontRight(FRt, FRb, FRr),
-        backLeft(BLt, BLb, BLr), backRight(BRt, BRb, BRr)
+        backLeft(BLt, BLb, BLr), backRight(BRt, BRb, BRr),
+        forward(forwardOffset, forwardPort, odomWheelRadius),
+        lateral(lateralOffset, lateralPort, odomWheelRadius)
       {}
       void Stop(vex::brakeType br = vex::brakeType::coast);
       void Drive(Vector2 driveVector, float rotationSpeed);
@@ -284,6 +316,9 @@ namespace MCEC{
       void FaceDirection(float direction);
       void UpdatePosition(float dt);
       void AutonMove(PathPoint pp);
+      void UpdatePositionUsingAccel(float);
+      void UpdatePositionUsingEncoder(float);
+      void UpdatePositionUsingOdom(float);
 
       Vector2 currentPos;
       
@@ -292,9 +327,10 @@ namespace MCEC{
     private:
       const static int MAX_MODULE_OUTPUT = 100;
       bool cospline = false;
-      float wheelbase  = 2;//20.25f - 2 * (2.708f);
-      float trackwidth = 2;//20.25f - 2 * (2.708f);
+      float wheelbase  = (12.75f + 11.75f) / 2;
+      float trackwidth = (14.125f + 13.125f) / 2;
       Vector2 currentVel, currentAccel;
+      OdomPod forward, lateral;
   };
 
   float Lerp(float a, float b, float t);

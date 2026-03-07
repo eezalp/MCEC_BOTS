@@ -14,6 +14,7 @@ struct Vector2{
     Vector2() : x(0), y(0) { }
     float GetMagnitude();
 
+  // @param deg: angle in degrees
     Vector2& Rotate(float deg);
 
     float GetAngle();

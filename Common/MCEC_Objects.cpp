@@ -29,7 +29,7 @@ float AngleDiff(float a_1, float a_2){
 }
 
 bool Joystick::isMoved(){
-  return (abs2(x) >= 0.1f || abs2(y) >= 0.1f);
+  return (abs2(x) >= 10.0f || abs2(y) >= 10.0f);
 }
 
 // Drivetrain
@@ -350,49 +350,34 @@ float WrapAngle(float angle) {
   }
 
   void SwervePod::GoToVector(Vector2 targ, bool canForward){
-    static float start = (vex::timer::system() / 1000.0f);
+    float static prevTargAngle = 0;
     float curTime = (vex::timer::system() / 1000.0f);
     float dt = curTime - lastTime;
     lastTime = curTime;
 
-    // if (dt <= 0 || dt > 0.1) dt = 0.02;
-
     float curAngle = GetAngle();
     float move = targ.GetMagnitude();
     float angl = targ.GetAngle();
+    
+    float angleDiffForward  = AngleDiff(WrapAngle(angl), curAngle);
+    float angleDiffReversed = AngleDiff(WrapAngle(angl + 180), curAngle);
+
+    // if(angl != prevTargAngle){
+    //   reversed = (angleDiffReversed < angleDiffForward - 5.0f);
+    // }
+
+    
     float angleDiff = AngleDiff(WrapAngle(angl + (reversed ? 180 : 0)), curAngle);
 
-    if(abs2(angleDiff) > 90){
-      reversed = !reversed;
-    }
+    float rotation = rotationPID.Update(angleDiff, dt) * std::sqrt(abs2(angleDiff/90.0f) * 2);
     
-    angl = WrapAngle(angl + (reversed ? 180 : 0));
-    angleDiff = AngleDiff(angl, curAngle);
-
-    float rotation = rotationPID.Update(angleDiff, dt) * (abs2(angleDiff/90.0f) * 3);
-    
-    Vector2 powerVector(reversed ? move : move, rotation);
+    Vector2 powerVector(move, rotation);
 
     SetPowers(powerVector, canForward);
+
+    prevTargAngle = angl;
   }
 
-  float SwervePod::GetPivot(Vector2 target, float angle){
-    float angleDiff = AngleDiff(target.GetAngle(), angle);
-
-    if(std::abs(angleDiff) > REVERSE_ENTER){
-      if(!onShortest){
-        reversed = !reversed;
-      }
-      onShortest = true;
-    }else if(std::abs(angleDiff) < REVERSE_EXIT){
-      onShortest = false;
-    }
-
-    if(std::abs(angleDiff) < ROTATION_ERROR){
-      return 0;
-    }
-    return Clamp(angleDiff / MAX_ROTATION_ANGLE, -1.0f, 1.0f);
-  }
 
   void SwervePod::SetPIDVariables(float P, float I, float D){
     rotationPID.SetVariables(P, I, D);
@@ -417,13 +402,55 @@ float WrapAngle(float angle) {
   void SwervePod::SetRotationOffset(float _off){
     rotationOffset = _off;
   }
+
+  float SwervePod::CalcWub(float g){
+    static float topOld = top.position(vex::rotationUnits::deg);
+    static float botOld = bottom.position(vex::rotationUnits::deg);
+    float heading = GetAngle() * (M_PI/180.0f);
+
+    float topCur = top.position(vex::rotationUnits::deg);
+    float botCur = bottom.position(vex::rotationUnits::deg);
+
+    delTop = AngleDiff(topCur, topOld) * (M_PI / 180.0f);
+    delBot = AngleDiff(botCur, botOld) * (M_PI / 180.0f);
+
+    float wheelWub = ((delTop + delBot) / 2);
+    float tangential = (wheelWub * std::sin(heading) * relPos.x) - (wheelWub * std::cos(heading) * relPos.y);
+    float wub = tangential / (relPos.GetMagnitude() * relPos.GetMagnitude());
+
+    topOld = topCur;
+    botOld = botCur;
+
+    return wub;
+  }
+  Vector2 SwervePod::GetTraveled(float dt, float wub) {
+    float heading = GetAngle() * (M_PI/180.0f);
+    float topCur = top.position(vex::rotationUnits::deg);
+    float botCur = bottom.position(vex::rotationUnits::deg);
+    
+    float wheelWub = ((delTop + delBot) / 2);
+    
+    Vector2 relativeVelocity(
+      (std::cos(heading) * wheelWub) - (wub * relPos.y),
+      (std::sin(heading) * wheelWub) + (wub * relPos.x)
+    );
+    controls.controller.Screen.setCursor(1, 1);
+    controls.controller.Screen.print("(%.2f, %.2f)                 ", delTop, delBot);
+
+    // return relativeVelocity;
+
+    return Vector2(
+        std::cos(heading) * wheelWub,
+        std::sin(heading) * wheelWub
+    );
+  }
   
   const Vector2 SwervePod::MOTOR_TOP_VECTOR = Vector2(1/std::sqrt(2), 1/std::sqrt(2));
   const Vector2 SwervePod::MOTOR_BOT_VECTOR = Vector2(-1/std::sqrt(2), 1/std::sqrt(2));
 //
 
 // SwerveDrive
-  void SwerveDrive::UpdatePosition(float dt){
+  void SwerveDrive::UpdatePositionUsingAccel(float dt){
     float x = inertial.acceleration(vex::axisType::xaxis);
     float y = inertial.acceleration(vex::axisType::yaxis);
     if(abs2(x) < .1f) x = 0;
@@ -441,19 +468,53 @@ float WrapAngle(float angle) {
       currentVel = Vector2(0, 0);
     }
     currentPos += currentVel * dt;
+  }
+  void SwerveDrive::UpdatePositionUsingEncoder(float dt){
+    Vector2 total = Vector2::zero;
+    float heading = inertial.heading();
+    float wub = 
+      (frontLeft.CalcWub(heading) + frontRight.CalcWub(heading) + 
+      backLeft.CalcWub(heading) + backRight.CalcWub(heading)) / 
+      4.0f;
+    
+    wub = inertial.gyroRate(vex::axisType::zaxis, vex::velocityUnits::dps) * (M_PI / 180.0f);
+    
+    total += frontLeft.GetTraveled(dt, wub);
+    total += frontRight.GetTraveled(dt, wub);
+    total += backLeft.GetTraveled(dt, wub);
+    total += backRight.GetTraveled(dt, wub);
 
-    // controls.controller.Screen.setCursor(1, 1);
-    // controls.controller.Screen.print("p:(%.2f, %.2f)    ", currentPos.x, currentPos.y);
-    // controls.controller.Screen.setCursor(2, 1);
-    // controls.controller.Screen.print("v:(%.2f, %.2f)    ", currentVel.x, currentVel.y);
+    total = total / 4;
+
+    currentPos += total;
+
+  }
+  void SwerveDrive::UpdatePositionUsingOdom(float dt){
+    static float lastHeading = inertial.heading();
+    float heading = inertial.heading();
+    float dTheta = AngleDiff(heading, lastHeading) * (M_PI/180.0f);
+    Vector2 posChange = Vector2(
+      forward.GetDeltaDistance() - (forward.offset.x * dTheta),
+      lateral.GetDeltaDistance() - (lateral.offset.y * dTheta)
+    );
+
+    currentPos += posChange.Rotate(((heading + lastHeading)) / 2);
+
+    lastHeading = heading;
+  }
+  void SwerveDrive::UpdatePosition(float dt){
+    // UpdatePositionUsingEncoder(dt);
+    // UpdatePositionUsingAccel(dt);
+    UpdatePositionUsingOdom(dt);
+
     // controls.controller.Screen.setCursor(3, 1);
-    // controls.controller.Screen.print("a:(%.2f, %.2f)    ", currentAccel.x, currentAccel.y);
+    // controls.controller.Screen.print("(%.2f, %.2f)                 ", currentPos.x, currentPos.y);
   }
   void SwerveDrive::Drive(Vector2 driveVector, float rotationSpeed){
-    static const Vector2 FL_pos(-trackwidth/2,  wheelbase/2);
-    static const Vector2 FR_pos( trackwidth/2,  wheelbase/2);
-    static const Vector2 BL_pos(-trackwidth/2, -wheelbase/2);
-    static const Vector2 BR_pos( trackwidth/2, -wheelbase/2);
+    static const Vector2 FL_pos(-1,  1);
+    static const Vector2 FR_pos( 1,  1);
+    static const Vector2 BL_pos(-1, -1);  
+    static const Vector2 BR_pos( 1, -1);
     
     Vector2 FL_rot(-FL_pos.y * rotationSpeed,  FL_pos.x * rotationSpeed);
     Vector2 FR_rot(FR_pos.y * rotationSpeed,  -FR_pos.x * rotationSpeed);
@@ -498,26 +559,23 @@ float WrapAngle(float angle) {
   }
 
   void SwerveDrive::AutonMove(PathPoint pp){
-    static const Vector2 FL_pos( std::sqrt(2)/2, std::sqrt(2)/2);
-    static const Vector2 FR_pos( std::sqrt(2)/2, -std::sqrt(2)/2);
-    static const Vector2 BL_pos(-std::sqrt(2)/2, std::sqrt(2)/2);
-    static const Vector2 BR_pos(-std::sqrt(2)/2, -std::sqrt(2)/2);
+    static const Vector2 FL_pos( 1, 1);
+    static const Vector2 FR_pos( 1, -1);
+    static const Vector2 BL_pos(-1, 1);
+    static const Vector2 BR_pos(-1, -1);
 
     frontLeft.GoToVector(FL_pos * (FL_pos * pp.point));
     frontRight.GoToVector(FR_pos * (FR_pos * pp.point));
     backLeft.GoToVector(BL_pos * (BL_pos * pp.point));
     backRight.GoToVector(BR_pos * (BR_pos * pp.point));
-    controls.controller.Screen.setCursor(2, 1);
-    controls.controller.Screen.print("(%.2f, %.2f), (%.2f, %.2f)", FL_pos.x, FL_pos.y, FR_pos.x, FR_pos.y);
-    // controls.controller.Screen.setCursor(3, 1);
-    // controls.controller.Screen.print("(%.2f, %.2f), (%.2f, %.2f)", BL_pos.x, BL_pos.y, BR_pos.x, BR_pos.y);
+  
   }
 
   void SwerveDrive::SetRotationOffsets(float fl, float fr, float bl, float br){
     frontLeft.SetRotationOffset(fl); frontRight.SetRotationOffset(fr);
     backLeft.SetRotationOffset(bl); backRight.SetRotationOffset(br);
 
-    frontLeft.screen  =  frontLeft.rotationPID.screen = 4;
+    frontLeft.screen  =  frontLeft.rotationPID.screen = 1;
     frontRight.screen = frontRight.rotationPID.screen = 4;
     backLeft.screen   =   backLeft.rotationPID.screen = 4;
     backRight.screen  =  backRight.rotationPID.screen = 4;
@@ -526,6 +584,14 @@ float WrapAngle(float angle) {
     frontRight.rotationPID.Prime(frontRight.GetAngle(), frontRight.GetAngle());
     backLeft.rotationPID.Prime(backLeft.GetAngle(), backLeft.GetAngle());
     backRight.rotationPID.Prime(backRight.GetAngle(), backRight.GetAngle());
+
+    frontLeft.relPos = Vector2(-trackwidth, wheelbase);
+    frontRight.relPos = Vector2(trackwidth, wheelbase);
+    backLeft.relPos = Vector2(-trackwidth, -wheelbase);
+    backRight.relPos = Vector2(trackwidth, -wheelbase);
+
+    frontLeft.motorRatio = frontRight.motorRatio = 1.0f/3.0f;
+    backLeft.motorRatio = backRight.motorRatio = 1.0f/3.0f;
   }
 
   void SwerveDrive::FaceDirection(float direction){
@@ -560,24 +626,22 @@ float WrapAngle(float angle) {
     currentPos = points.front().point;
     for(PathPoint p : points){
       direction = Vector2(p.point, currentPos);
-      // controls.controller.Screen.setCursor(2, 1);
-      // controls.controller.Screen.print("%.2f", direction.GetMagnitude());
       while(direction.GetMagnitude() > 0.5f){
         curTime = (vex::timer::system() / 1000.0f);
         dt = curTime - lastTime;
         lastTime = curTime;
 
-        if(!comp.isAutonomous()){
-          return;
-        }
-        controls.controller.Screen.setCursor(3, 1);
-        controls.controller.Screen.print("(%.2f, %.2f)                 ", currentPos.x, currentPos.y);
+        // if(!comp.isAutonomous()){
+        //   return;
+        // }
         AutonMove(p);
         UpdatePosition(dt);
+        controls.controller.Screen.setCursor(3, 1);
+        controls.controller.Screen.print("%.2f, %.2f", p.point.x, p.point.y);
         direction = Vector2(p.point, currentPos);
-        if(!comp.isAutonomous()){
-          return;
-        }
+        // if(!comp.isAutonomous()){
+        //   return;
+        // }
       }
     }
   }
