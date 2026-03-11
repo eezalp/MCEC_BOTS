@@ -66,6 +66,23 @@ namespace MCEC{
       float _maxOutput = 1.0f;
       float _integralMax = 0.3f;
   };
+  class PID {
+    public:
+      PID(float P, float I, float D) : m_P(P), m_I(I), m_D(D) { }
+      PID() : m_P(0), m_I(0), m_D(0) {}
+      void SetVariables(float P, float I, float D);
+      void SetTarget(float targ);
+      void Prime(float curAngle, float targAngle);
+      void Reset();
+      float Update(float error, float dt);
+    private:
+      float m_P = 1, m_I = 1, m_D = 0.1f;
+      float _target = 0;
+      float _integral = 0;
+      float _prevError = 0;
+      float _maxOutput = 1.0f;
+      float _integralMax = 0.3f;
+  };
   class MotorGroup{
     public:
       std::vector<vex::motor> groupList;
@@ -234,7 +251,7 @@ namespace MCEC{
 
   class OdomPod{
     public:
-      OdomPod(Vector2 _offset, int port, float _r) : offset(_offset), encoder(port), wheelRadius(_r) {
+      OdomPod(Vector2 _offset, int port, float _r) : offset(_offset), encoder(port, false), wheelRadius(_r) {
         firstPos = lastPos = encoder.angle();
       }
       
@@ -251,8 +268,8 @@ namespace MCEC{
         return AngleDiff(curPos, firstPos) * (M_PI/180.0f) * wheelRadius;
       }
       Vector2 offset;
-    private:
       vex::rotation encoder;
+    private:
       float lastPos;
       float firstPos;
       float wheelRadius;
@@ -315,10 +332,11 @@ namespace MCEC{
       void GoToPoint();
       void FaceDirection(float direction);
       void UpdatePosition(float dt);
-      void AutonMove(PathPoint pp);
+      void AutonMove(PathPoint pp, float dt);
       void UpdatePositionUsingAccel(float);
       void UpdatePositionUsingEncoder(float);
       void UpdatePositionUsingOdom(float);
+      void SetAutonPIDVariables(float, float, float, float, float, float);
 
       Vector2 currentPos;
       
@@ -329,6 +347,7 @@ namespace MCEC{
       const static int MAX_MODULE_OUTPUT = 100;
       float wheelbase  = (12.75f + 11.75f) / 2;
       float trackwidth = (14.125f + 13.125f) / 2;
+      PID autonForward, autonLateral;
       Vector2 currentVel, currentAccel;
       OdomPod forward, lateral;
   };

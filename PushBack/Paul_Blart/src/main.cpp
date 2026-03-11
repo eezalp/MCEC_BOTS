@@ -62,8 +62,8 @@ MCEC::SwerveDrive drivetrain(
   vex::PORT18, vex::PORT19, vex::PORT20, // front right // former back right
   vex::PORT3 , vex::PORT2 , vex::PORT1 , // back left // former back left
   vex::PORT8 , vex::PORT9 , vex::PORT10, // back right // former front left
-  Vector2(7.25f, -1.375f), vex::PORT16, // forward encoder
-  Vector2(-4.5f, -0.125f), vex::PORT15, // lateral encoder
+  Vector2(7.25f, -1.375f), vex::PORT21, // forward encoder
+  Vector2(-4.5f, -0.125f), vex::PORT4, // lateral encoder
   1.25f  // odom wheel radius
 );
 
@@ -102,7 +102,7 @@ void PosUpdate(){
     lastTime = curTime;
     drivetrain.UpdatePosition(dt);
 
-    vex::this_thread::sleep_for(10);
+    vex::this_thread::sleep_for(20);
   }
 }
 
@@ -183,7 +183,7 @@ void TurretDown(){
 void Driver(){
   controls.controller.rumble("..");
 
-  vex::thread Thread = vex::thread(PosUpdate);
+  // vex::thread Thread = vex::thread(PosUpdate);
 
   while(1){
     DriverLoop();
@@ -193,13 +193,15 @@ void Driver(){
 
 void Auton(){
   controls.controller.Screen.clearScreen();
-  controls.controller.Screen.setCursor(1, 1);
-  controls.controller.Screen.print("Auton");
+  // controls.controller.Screen.setCursor(1, 1);
+  // controls.controller.Screen.print("Auton");
 
   drivetrain.points = {
     //Put the path planner points here
+    {{0, 0}, 0},
+    {{5, 0}, 0}
     // {{-61.634, 18.23}, 89.752},
-    // {{-60.747, 20.022}, 86.875},
+    // {{-60.747, 20.022}, 86.875}//,
     // {{-59.861, 21.815}, 83.901},
     // {{-58.974, 23.608}, 80.817},
     // {{-58.087, 25.401}, 77.61},
@@ -219,7 +221,7 @@ void Auton(){
     // {{-38.706, 64.583}, 0}
   };
 
-  // drivetrain.GoToPoint();
+  drivetrain.GoToPoint();
 }
 
 void FaceDriver(){
@@ -259,6 +261,8 @@ void SetControls(){
 
   controls.B.SetOnPress(DisableForward);
   controls.B.SetOnRelease(EnableForward);
+
+  controls.Y.SetOnPress(Auton);
 
   // controls.Down.SetOnPress(FaceDriver);
   // controls.Up.SetOnPress(FaceOpponent);
@@ -303,12 +307,18 @@ int main(){
     89.03f, //fl 3
     173.67f, //fr 9
     99.31f, //bl 6
-    54.49f + 90 //br 12
+    54.49f + 270 //br 12
   );
-  drivetrain.frontLeft.SetPIDVariables (1.2f, 0.0f, 0.08f);
-  drivetrain.frontRight.SetPIDVariables(1.2f, 0.0f, 0.08f);
-  drivetrain.backLeft.SetPIDVariables  (1.2f, 0.0f, 0.08f);
-  drivetrain.backRight.SetPIDVariables (1.2f, 0.0f, 0.08f);
+  drivetrain.frontLeft.SetPIDVariables (1.2f, 0.0f, 0.1f);
+  drivetrain.frontRight.SetPIDVariables(1.2f, 0.0f, 0.1f);
+  drivetrain.backLeft.SetPIDVariables  (1.2f, 0.0f, 0.1f);
+  drivetrain.backRight.SetPIDVariables (1.2f, 0.0f, 0.1f);
+
+  drivetrain.SetAutonPIDVariables(
+    0.1f, 0.0f, 0.0f, // forward
+    0.1f, 0.0f, 0.0f  // lateral
+  );
+
   // drivetrain.frontRight.SetPIDVariables(0.0f, 0.0f, 0.00f);
   // drivetrain.backLeft.SetPIDVariables  (0.0f, 0.0f, 0.00f);
   // drivetrain.backRight.SetPIDVariables (0.0f, 0.0f, 0.00f);
@@ -325,6 +335,6 @@ int main(){
     if(!comp.isFieldControl()){
        DriverLoop();
     }
-    vex::wait(100, vex::msec);
+    vex::wait(10, vex::msec);
   }
 }
