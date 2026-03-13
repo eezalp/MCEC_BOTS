@@ -32,7 +32,7 @@ extern vex::inertial inertial;
 
 namespace MCEC{
   
-
+  extern vex::mutex screenMutex;
   float abs2(float n);
   float AngleDiff(float a_1, float a_2);
 
@@ -275,6 +275,8 @@ namespace MCEC{
       float wheelRadius;
   };
 
+  class SwerveDrive;
+
   class SwervePod{
     public:
       int screen = 1;
@@ -287,8 +289,8 @@ namespace MCEC{
       bool cosplineMode = false;
       bool atTarget = false;
       float motorRatio = 1;
-      void SetPowers(Vector2 power, bool straight = false);
-      void GoToVector(Vector2 targ, bool canForward = false);
+      void SetPowers(float move, float rot, bool straight = false);
+      void GoToVector(Vector2 targ, bool canForward = false, float dt = 0);
       void Brake(vex::brakeType br);
       float GetAngle();
       float CalcWub(float);
@@ -297,7 +299,7 @@ namespace MCEC{
       void SetPIDVariables(float P, float I, float D);
       bool IsMoving();
 
-      SwervePod(int32_t t, int32_t b, int32_t r) : top(t), bottom(b), rotation(r) {}
+      SwervePod(int32_t t, int32_t b, int32_t r, SwerveDrive* drivetrain) : top(t), bottom(b), rotation(r), master(drivetrain) {}
 
     private:
       const static Vector2 MOTOR_TOP_VECTOR;
@@ -307,6 +309,7 @@ namespace MCEC{
       bool onShortest = false, reversed = false;
       float rotationOffset = 0.0f;
       float delTop, delBot;
+      SwerveDrive* master;
   };
 
   class SwerveDrive {
@@ -319,20 +322,20 @@ namespace MCEC{
         int32_t BRt, int32_t BRb, int32_t BRr,
         Vector2 forwardOffset, int32_t forwardPort,
         Vector2 lateralOffset, int32_t lateralPort,
-        float odomWheelRadius
+        float odomWheelDiameter
       ) :
-        frontLeft(FLt, FLb, FLr), frontRight(FRt, FRb, FRr),
-        backLeft(BLt, BLb, BLr), backRight(BRt, BRb, BRr),
-        forward(forwardOffset, forwardPort, odomWheelRadius),
-        lateral(lateralOffset, lateralPort, odomWheelRadius)
+        frontLeft(FLt, FLb, FLr, this), frontRight(FRt, FRb, FRr, this),
+        backLeft(BLt, BLb, BLr, this), backRight(BRt, BRb, BRr, this),
+        forward(forwardOffset, forwardPort, odomWheelDiameter / 2),
+        lateral(lateralOffset, lateralPort, odomWheelDiameter / 2)
       {}
-      void Stop(vex::brakeType br = vex::brakeType::coast);
+      void Stop(vex::brakeType br = vex::brakeType::hold);
       void Drive(Vector2 driveVector, float rotationSpeed);
       void SetRotationOffsets(float, float, float, float);
       void GoToPoint();
       void FaceDirection(float direction);
       void UpdatePosition(float dt);
-      void AutonMove(PathPoint pp, float dt);
+      void AutonMove(Vector2 driveVector, float targetHeading, float dt);
       void UpdatePositionUsingAccel(float);
       void UpdatePositionUsingEncoder(float);
       void UpdatePositionUsingOdom(float);
@@ -343,11 +346,13 @@ namespace MCEC{
       SwervePod frontLeft, frontRight, backLeft, backRight;
       std::vector<PathPoint> points;
       bool canForward = true;
+      bool runningAuton = false;
     private:
       const static int MAX_MODULE_OUTPUT = 100;
       float wheelbase  = (12.75f + 11.75f) / 2;
       float trackwidth = (14.125f + 13.125f) / 2;
-      PID autonForward, autonLateral;
+      PID autonMovePID;
+      RotationPID autonRotationPID;
       Vector2 currentVel, currentAccel;
       OdomPod forward, lateral;
   };

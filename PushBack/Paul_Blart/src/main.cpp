@@ -53,7 +53,7 @@
 #define TURRET_MAX_ANGLE 23
 #define TURRET_MIN_ANGLE 11
 
-
+vex::mutex MCEC::screenMutex;
 vex::competition comp;
 vex::brain Brain;
 
@@ -64,7 +64,7 @@ MCEC::SwerveDrive drivetrain(
   vex::PORT8 , vex::PORT9 , vex::PORT10, // back right // former front left
   Vector2(7.25f, -1.375f), vex::PORT21, // forward encoder
   Vector2(-4.5f, -0.125f), vex::PORT4, // lateral encoder
-  1.25f  // odom wheel radius
+  2.0f  // odom wheel radius
 );
 
 // Motors
@@ -82,7 +82,6 @@ MCEC::Controller controls = MCEC::Controller();
 vex::digital_out turret(Brain.ThreeWirePort.A);
 vex::digital_out shiv(Brain.ThreeWirePort.C);
 
-float dt;
 bool turretUp = false;
 bool shivUp = false;
 
@@ -92,15 +91,16 @@ void StopMoving(){
 
 
 void PosUpdate(){
-  static float start = (vex::timer::system() / 1000.0f), end;
+  static float start = (vex::timer::system()), end;
   static float lastTime;
-  float curTime = (vex::timer::system() / 1000.0f);
+  float curTime = (vex::timer::system());
+  float dt;
+  dt = curTime - lastTime;
+  lastTime = curTime;
 
   while(true){
-    curTime = (vex::timer::system() / 1000.0f);
-    dt = curTime - lastTime;
-    lastTime = curTime;
-    drivetrain.UpdatePosition(dt);
+    if(!drivetrain.runningAuton)
+      drivetrain.UpdatePosition(dt);
 
     vex::this_thread::sleep_for(20);
   }
@@ -109,6 +109,7 @@ void PosUpdate(){
 void DriverLoop(){
   static Vector2 lastJoystick = Vector2(0, 0);
   controls.Set();
+  if(drivetrain.runningAuton) return;
 
   if(controls.lStick.isMoved() || controls.rStick.isMoved()){
     Vector2 controllerVector(-controls.lStick.y, -controls.lStick.x);
@@ -120,7 +121,8 @@ void DriverLoop(){
   }else{
     drivetrain.Stop(vex::brakeType::coast);
   }
-
+  
+  vex::this_thread::sleep_for(20);
 }
 
 void IntakeStore(){
@@ -183,45 +185,27 @@ void TurretDown(){
 void Driver(){
   controls.controller.rumble("..");
 
-  // vex::thread Thread = vex::thread(PosUpdate);
+  vex::thread Thread = vex::thread(PosUpdate);
 
   while(1){
     DriverLoop();
-    wait(20, vex::msec);
+    // wait(20, vex::msec);
   }
 }
 
 void Auton(){
   controls.controller.Screen.clearScreen();
+
   // controls.controller.Screen.setCursor(1, 1);
   // controls.controller.Screen.print("Auton");
 
-  drivetrain.points = {
-    //Put the path planner points here
-    {{0, 0}, 0},
-    {{5, 0}, 0}
-    // {{-61.634, 18.23}, 89.752},
-    // {{-60.747, 20.022}, 86.875}//,
-    // {{-59.861, 21.815}, 83.901},
-    // {{-58.974, 23.608}, 80.817},
-    // {{-58.087, 25.401}, 77.61},
-    // {{-57.2, 27.193}, 74.265},
-    // {{-56.314, 28.986}, 70.763},
-    // {{-55.427, 30.779}, 67.077},
-    // {{-54.54, 32.571}, 63.177},
-    // {{-53.654, 34.364}, 59.02},
-    // {{-52.767, 36.157}, 54.547},
-    // {{-51.88, 37.949}, 49.672},
-    // {{-50.993, 39.742}, 44.264},
-    // {{-50.107, 41.535}, 38.096},
-    // {{-49.22, 43.327}, 30.714},
-    // {{-48.333, 45.12}, 20.865},
-    // {{-47.573, 46.656}, 0},
-    // {{-47.573, 46.656}, 0},
-    // {{-38.706, 64.583}, 0}
-  };
+  
 
   drivetrain.GoToPoint();
+}
+
+void RunAuton(){
+  vex::thread autonThread = vex::thread([]{ Auton(); });
 }
 
 void FaceDriver(){
@@ -285,12 +269,40 @@ void InitInertial(){
 }
 
 void SetupFieldControl(){
-    comp.drivercontrol(Driver);
-  if(!comp.isFieldControl()){
+  comp.drivercontrol(Driver);
+  if(comp.isFieldControl()){
     controls.controller.Screen.clearScreen();
     controls.controller.Screen.print("Field Control");
       comp.autonomous(Auton);
   }
+}
+
+void SetAutonPath(){
+  drivetrain.points = {
+    //Put the path planner points here
+    {{0, 0}, 0},
+    {{24, 0}, 90}//,
+    //{{24, 0}, 90}
+    // {{-61.634, 18.23}, 89.752},
+    // {{-60.747, 20.022}, 86.875},
+    // {{-59.861, 21.815}, 83.901},
+    // {{-58.974, 23.608}, 80.817},
+    // {{-58.087, 25.401}, 77.61},
+    // {{-57.2, 27.193}, 74.265},
+    // {{-56.314, 28.986}, 70.763},
+    // {{-55.427, 30.779}, 67.077},
+    // {{-54.54, 32.571}, 63.177},
+    // {{-53.654, 34.364}, 59.02},
+    // {{-52.767, 36.157}, 54.547},
+    // {{-51.88, 37.949}, 49.672},
+    // {{-50.993, 39.742}, 44.264},
+    // {{-50.107, 41.535}, 38.096},
+    // {{-49.22, 43.327}, 30.714},
+    // {{-48.333, 45.12}, 20.865},
+    // {{-47.573, 46.656}, 0},
+    // {{-47.573, 46.656}, 0},
+    // {{-38.706, 64.583}, 0}
+  };
 }
 
 //what does PID stand for????
@@ -298,26 +310,26 @@ void SetupFieldControl(){
 float PID[] = {0.5f, 0.05f, 0.02f};
 
 int main(){
+
+  SetAutonPath();
   
   InitInertial();
   SetControls();
-
-  drivetrain.SetRotationOffsets(
-    //updated
-    89.03f, //fl 3
-    173.67f, //fr 9
-    99.31f, //bl 6
-    54.49f + 270 //br 12
-  );
-  drivetrain.frontLeft.SetPIDVariables (1.2f, 0.0f, 0.1f);
-  drivetrain.frontRight.SetPIDVariables(1.2f, 0.0f, 0.1f);
-  drivetrain.backLeft.SetPIDVariables  (1.2f, 0.0f, 0.1f);
-  drivetrain.backRight.SetPIDVariables (1.2f, 0.0f, 0.1f);
+  // drivetrain.frontLeft.SetPIDVariables (1.2f, 0.0f, 0.1f);
+  // drivetrain.frontRight.SetPIDVariables(1.2f, 0.0f, 0.1f);
+  // drivetrain.backLeft.SetPIDVariables  (1.2f, 0.0f, 0.1f);
+  // drivetrain.backRight.SetPIDVariables (1.2f, 0.0f, 0.1f);
+  drivetrain.frontLeft.SetPIDVariables (0.4f, 0.0f, 0.08f);
+  drivetrain.frontRight.SetPIDVariables(0.4f, 0.0f, 0.08f);
+  drivetrain.backLeft.SetPIDVariables  (0.4f, 0.0f, 0.08f);
+  drivetrain.backRight.SetPIDVariables (0.4f, 0.0f, 0.08f);
 
   drivetrain.SetAutonPIDVariables(
-    0.1f, 0.0f, 0.0f, // forward
-    0.1f, 0.0f, 0.0f  // lateral
+    0.1f, 0.0f, 0.0f, // movement
+    0.1f, 0.0f, 0.0f  // rotation
   );
+
+
 
   // drivetrain.frontRight.SetPIDVariables(0.0f, 0.0f, 0.00f);
   // drivetrain.backLeft.SetPIDVariables  (0.0f, 0.0f, 0.00f);
@@ -330,11 +342,25 @@ int main(){
   // controls.controller.Screen.setCursor(3, 1);
   // controls.controller.Screen.print("%.2f  %.2f", drivetrain.backLeft.rotation.angle(), drivetrain.backRight.rotation.angle());
 
+
+  drivetrain.SetRotationOffsets(
+    //updated
+    89.03f, //fl 3
+    173.67f, //fr 9
+    93.42f, //bl 6
+    54.49f + 270 //br 12
+  );
+
   controls.controller.rumble(".....");
+  
+  // controls.controller.Screen.clearScreen();
+  // controls.controller.Screen.setCursor(1, 1);
+  // controls.controller.Screen.print("%.2f  %.2f", drivetrain.frontLeft.rotation.angle(), drivetrain.frontRight.rotation.angle());
+  // controls.controller.Screen.setCursor(2, 1);
+  // controls.controller.Screen.print("%.2f  %.2f", drivetrain.backLeft.rotation.angle(), drivetrain.backRight.rotation.angle());
   while(1) {
     if(!comp.isFieldControl()){
-       DriverLoop();
+      // DriverLoop();
     }
-    vex::wait(10, vex::msec);
   }
 }
