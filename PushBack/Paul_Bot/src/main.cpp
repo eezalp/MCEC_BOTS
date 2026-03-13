@@ -181,14 +181,28 @@ void LeverStop(){
 }
 
 void Auton(){
-
+  Controller1.Screen.clearScreen();
+  Controller1.Screen.setCursor(1,1);
+  Controller1.Screen.print("Auton Go");
+  //approach goal
+  xdrive.move(2.1, RIGHT);
+  xdrive.move(22.1);
+  //turn to face goal
+  xdrive.turnInPlace(45);
+  shoot();
+  xdrive.move(5, BACKWARD);
+  
+  //
+  xdrive.turnInPlace(-40);
+  IntakeGo();
+  xdrive.move(40, BACKWARD);
+  wait(1, seconds);
+  IntakeStop();
 }
 
 void SetupFieldControl(){
-  if(comp.isFieldControl()){
-    comp.drivercontrol(Driver);
-    comp.autonomous(Auton);
-  }
+  comp.drivercontrol(Driver);
+  comp.autonomous(Auton);
 }
 
 void SetupControls(){
@@ -222,9 +236,9 @@ void SetupImu(){
   imu.setHeading(0, vex::deg);
   imu.setRotation(0, vex::deg);
 
-  Controller1.Screen.clearScreen();
-  Controller1.Screen.setCursor(1,1);
-  Controller1.Screen.print("Imu Calibrated");
+  // Controller1.Screen.clearScreen();
+  // Controller1.Screen.setCursor(1,1);
+  // Controller1.Screen.print("Imu Calibrated");
 }
 
 int main() {
@@ -246,8 +260,9 @@ int main() {
 
   
   while(1) {
-    if(!comp.isFieldControl()){
+    if(!comp.isFieldControl() && !comp.isAutonomous() && !comp.isDriverControl()){
       DriverLoop();
     }
+    wait(20, msec);
   }
 }

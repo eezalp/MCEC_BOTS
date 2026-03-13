@@ -174,27 +174,57 @@ void XDrive::runPath(const char* path) {
 
 float wheelDiameter = 2.75;
 
-//@param distance 
-void XDrive::driveForward(int distance){
-    int trueDistance = distance * cos(M_1_PI / 4);
-    float FLStart =  Fleft.position(rotationUnits::degrees) * (M_PI / 180.0f);
-    float FRStart = Fright.position(rotationUnits::degrees) * (M_PI / 180.0f);
-    float BLStart =  Bleft.position(rotationUnits::degrees) * (M_PI / 180.0f);
-    float BRStart = Bright.position(rotationUnits::degrees) * (M_PI / 180.0f);
+void XDrive::move(float distance, DriveDirection dir){
+    float trueDistance = fabs(distance / (wheelDiameter * M_PI) * 360.0f);
+    float FLStart = Fleft.position(degrees);
+    float FRStart = Fright.position(degrees);
+    float BLStart = Bleft.position(degrees);
+    float BRStart = Bright.position(degrees);
+    Vector2 fwdVec(
+        dir == FORWARD ? 100.0f : dir == BACKWARD ? -100.0f : 0.0f,
+        dir == LEFT    ? 100.0f : dir == RIGHT     ? -100.0f : 0.0f
+    );
+    Brain.Screen.clearScreen();
+    Brain.Screen.setCursor(1, 1);
+    Brain.Screen.print("tgt:%.0f", trueDistance);
+    Brain.Screen.render();
+    wait(1000, msec);
+    headingPID.reset();
+    float startHeading = imu->rotation();
+    vex::timer t;
+    t.reset();
+    float correction = 0;
     while(
         (
-            (Fleft.position(rotationUnits::degrees) * (M_PI / 180.0f) - FLStart) + 
-            (Fright.position(rotationUnits::degrees) * (M_PI / 180.0f) - FRStart) + 
-            (Bleft.position(rotationUnits::degrees) * (M_PI / 180.0f) - BLStart) + 
-            (Bright.position(rotationUnits::degrees) * (M_PI / 180.0f) - BRStart)
-        ) / 4 < trueDistance){
-        setTarget(0, 1, 0);
+            fabs(Fleft.position(degrees) - FLStart) +
+            fabs(Fright.position(degrees) - FRStart) +
+            fabs(Bleft.position(degrees) - BLStart) +
+            fabs(Bright.position(degrees) - BRStart)
+        ) / 4 < trueDistance && t.time(msec) < 5000){
+        correction = headingPID.update(startHeading, imu->rotation());
+        setVel(
+            FleftV * fwdVec * -1 + correction,
+            BleftV * fwdVec + correction,
+            FrightV * fwdVec - correction,
+            BrightV * fwdVec * -1 - correction
+        );
+        wait(20, msec);
     }
     Stop();
 }
 
-void XDrive::turnInPlace(int degrees){
-    while(fabs(imu->heading() - degrees) > 1){
-        setTarget(0, 0, 1)
-    }
+void XDrive::turnInPlace(float targetDeg){
+    PID pid(1.2f, 0.0f, 0.2f);
+    float diff;
+    do {
+        diff = targetDeg - imu->heading();
+        while(diff > 180) diff -= 360;
+        while(diff < -180) diff += 360;
+        float output = pid.update(diff, 0);
+        if(output > 100) output = 100;
+        if(output < -100) output = -100;
+        setVel(output, output, -output, -output);
+        wait(20, msec);
+    } while(fabs(diff) > 1);
+    Stop();
 }

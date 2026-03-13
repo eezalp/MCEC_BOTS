@@ -32,6 +32,8 @@ struct PathPoint {
     float x, y, speed, heading;
 };
 
+enum DriveDirection { FORWARD, BACKWARD, LEFT, RIGHT };
+
 double Lerp(double, double, double);
 
 std::vector<PathPoint> pathFromFile(const char* filename);
@@ -58,8 +60,6 @@ class XDrive {
     void setVel(double _LF, double _LB, double _RF, double _RB);
 
     void Stop();
-    void driveForward(int);
-    void turnInPlace(int);
 
     
 public:
@@ -69,4 +69,6 @@ public:
     void setTarget(float controllerX, float controllerY, float turning);
     void runPath(const char* path);
     void UpdateMotorSpeeds();
+    void move(float distance, DriveDirection dir = FORWARD);
+    void turnInPlace(float targetDeg);
 };
