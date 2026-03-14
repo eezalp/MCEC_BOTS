@@ -43,7 +43,8 @@ namespace MCEC{
   
   struct PathPoint{
     Vector2 point;
-    float speed, heading;
+    float heading;
+    float speed;
   };
   std::vector<PathPoint> pathFromFile(const char* filename);
   
@@ -242,11 +243,12 @@ namespace MCEC{
       L1, L2, R1, R2, 
       LS, RS, 
       Up, Down, Left, Right;
-
+    float exponent = 2;
     Joystick lStick, rStick;
     vex::controller controller;
-    Controller() : controller() {}
+    Controller(float _exponent = 2.0f) : controller(), exponent(_exponent) {}
     void Set();
+    float JoystickCurve(float input);
   };
 
   class OdomPod{

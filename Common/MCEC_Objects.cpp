@@ -300,12 +300,12 @@ void PID::SetVariables(float P, float I, float D){
 
 void Controller::Set(){
     rStick.Set(
-        controller.Axis1.position(), 
-        controller.Axis2.position()
+        JoystickCurve(controller.Axis1.position() / 100.0f) * 100.0f, 
+        JoystickCurve(controller.Axis2.position() / 100.0f) * 100.0f
     );
     lStick.Set(
-        controller.Axis4.position(), 
-        controller.Axis3.position()
+        JoystickCurve(controller.Axis4.position() / 100.0f) * 100.0f, 
+        JoystickCurve(controller.Axis3.position() / 100.0f) * 100.0f
     );
 
     R1.Set(controller.ButtonR1.pressing());
@@ -323,6 +323,10 @@ void Controller::Set(){
     Down.Set(controller.ButtonDown.pressing());
     Up.Set(controller.ButtonUp.pressing());
 }
+float Controller::JoystickCurve(float input){
+  // preserves sign, applies curve to magnitude
+  return std::copysign(std::pow(std::abs(input), exponent), input);
+}
 
 std::vector<PathPoint> pathFromFile(const char* filename) {
   std::vector<PathPoint> points;
@@ -337,7 +341,7 @@ std::vector<PathPoint> pathFromFile(const char* filename) {
   char* line = strtok((char*)buf, "\n");
   while (line != nullptr) {
       PathPoint p = {{0, 0}, 0, 0};
-      sscanf(line, "%f,%f,%f,%f", &p.point.x, &p.point.y, &p.speed, &p.heading);
+      sscanf(line, "%f,%f,%f,%f", &p.point.x, &p.point.y, &p.heading, &p.speed);
       points.push_back(p);
       line = strtok(nullptr, "\n");
   }
@@ -369,14 +373,14 @@ float WrapAngle(float angle) {
     float topPower = move - (rot * 100.0f);
     float botPower = move + (rot * 100.0f);
 
-    if(screen < 4){
-      controls.controller.Screen.setCursor(2, 1);
-      controls.controller.Screen.print("%.2f, %.2f", topPower, botPower);
-    }
-    if(screen < 4){
-      controls.controller.Screen.setCursor(3, 1);
-      controls.controller.Screen.print("%.2f, %.2f", move, rot);
-    }
+    // if(screen < 4){
+    //   controls.controller.Screen.setCursor(2, 1);
+    //   controls.controller.Screen.print("%.2f, %.2f", topPower, botPower);
+    // }
+    // if(screen < 4){
+    //   controls.controller.Screen.setCursor(3, 1);
+    //   controls.controller.Screen.print("%.2f, %.2f", move, rot);
+    // }
 
     float maxPower = max2(abs2(topPower), abs2(botPower));
     if (maxPower > MAX_MOTOR_POWER) {
@@ -426,14 +430,14 @@ float WrapAngle(float angle) {
     Vector2 powerVector((canForward ? move : 0) / denom, rot);
     move = (canForward ? move : 0) / denom;
     
-    float topPower = move - (rot * 100.0f);
-    float botPower = move + (rot * 100.0f);
-    if(screen < 4){
-      controls.controller.Screen.setCursor(2, 1);
-      controls.controller.Screen.print("%.2f, %.2f", topPower, move - (rot * 100.0f));
-      controls.controller.Screen.setCursor(3, 1);
-      controls.controller.Screen.print("%.2f, %.2f", move, rot);
-    }
+    volatile float topPower = move - (rot * 100.0f);
+    volatile float botPower = move + (rot * 100.0f);
+    // if(screen < 4){
+    //   controls.controller.Screen.setCursor(2, 1);
+    //   controls.controller.Screen.print("%.2f, %.2f", topPower, move - (rot * 100.0f));
+    //   controls.controller.Screen.setCursor(3, 1);
+    //   controls.controller.Screen.print("%.2f, %.2f", move, rot);
+    // }
     float maxPower = max2(abs2(topPower), abs2(botPower));
     if (maxPower > MAX_MOTOR_POWER) {
       topPower *= MAX_MOTOR_POWER / maxPower;
@@ -636,21 +640,19 @@ float WrapAngle(float angle) {
 
   void SwerveDrive::AutonMove(Vector2 driveVector, float targetHeading, float dt){
     float power = autonMovePID.Update(driveVector.GetMagnitude(), dt);
-    float rotationPower = 0;//autonRotationPID.Update(AngleDiff(targetHeading, inertial.heading()), dt);
-    rotationPower = 0;
+    float angleDiff = AngleDiff(targetHeading, inertial.heading());
+    float rotationPower = autonRotationPID.Update(angleDiff, dt);
+    if(abs2(angleDiff) < 3) rotationPower = 0;
     driveVector = driveVector.Normalize();
-
-    // driveVector = Vector2(
-    //   driveVector.x,// * fPID 
-    //   driveVector.y// * lPID
-    // );
 
     screenMutex.lock();
     controls.controller.Screen.setCursor(1, 1);
-    controls.controller.Screen.print("%.1f, %.1f", driveVector.x * power * -50, power);
+    controls.controller.Screen.print("%.2f, %.2f", rotationPower, angleDiff);
+    controls.controller.Screen.setCursor(3, 1);
+    controls.controller.Screen.print("%.2f, %.2f", rotationPower * 30, driveVector * power * -50);
     screenMutex.unlock();
 
-    Drive(driveVector * power * -50, rotationPower * 1);
+    Drive(driveVector * power * 50, rotationPower * 30);
   }
 
   void SwerveDrive::SetRotationOffsets(float fl, float fr, float bl, float br){
@@ -707,6 +709,7 @@ float WrapAngle(float angle) {
     static uint32_t lastTime = vex::timer::system();
     uint32_t curTime = vex::timer::system();
     float dt = (curTime - lastTime) / 1000.0f;
+    //why is it 20?
     float angleDiff = 20;
 
     int count = 0;
@@ -720,18 +723,19 @@ float WrapAngle(float angle) {
     backLeft.rotationPID.Reset();
     backRight.rotationPID.Reset();
 
-    for(PathPoint p : points){
+    for(PathPoint &p : points){
       direction.x = p.point.x - currentPos.x;
       direction.y = p.point.y - currentPos.y;
-      angleDiff = 30;
-      while(direction.GetMagnitude() > 0.1f || angleDiff > 3){
-        direction.x = p.point.x - currentPos.x;
-        direction.y = p.point.y - currentPos.y;
-        angleDiff = abs2(AngleDiff(p.heading, inertial.heading()));
+      // angleDiff = 30;
+      autonRotationPID.Reset();
+      autonMovePID.Reset();
+      while(direction.GetMagnitude() > 0.1f || abs2(angleDiff) > 3){
         curTime = vex::timer::system();
         dt = (curTime - lastTime)/1000.0f;
         lastTime = curTime;
-
+        if(direction.GetMagnitude() <= 0.1f){
+          direction = Vector2::zero;
+        }
         AutonMove(direction, p.heading, dt);
         UpdatePosition(dt);
         // controls.controller.Screen.setCursor(2, 1);
@@ -739,15 +743,22 @@ float WrapAngle(float angle) {
         // if(!comp.isAutonomous()){
         //   return;
         // }
+        direction.x = p.point.x - currentPos.x;
+        direction.y = p.point.y - currentPos.y;
+        angleDiff = abs2(AngleDiff(p.heading, inertial.heading()));
         vex::this_thread::sleep_for(20);
       }
 
       Stop();
     }
-
     controls.controller.Screen.clearScreen();
     controls.controller.Screen.setCursor(1, 1);
     controls.controller.Screen.print("Auton done");
+    controls.controller.Screen.setCursor(2, 1);
+    controls.controller.Screen.print("%d:%.2f", angleDiff > 3,angleDiff);
+    controls.controller.Screen.setCursor(3, 1);
+    controls.controller.Screen.print("%.2f, %.2f", p.heading, inertial.heading());
+
     runningAuton = false;
   }
 //

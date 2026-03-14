@@ -33,8 +33,7 @@ vex::competition comp;
   limit leverLimit1 = limit(Brain.ThreeWirePort.G);
 
   motor descore = motor(PORT12, ratio18_1);
-
-  motor gorilla = motor(PORT14, ratio18_1);
+  motor matchload = motor(PORT11);
 
 bool isReversed = false;
 
@@ -71,25 +70,6 @@ void DescoreStore(){
   descore.spinToPosition(20, degrees);
 }
 
-float gDistance = 0;
-void gorillaDown(){
-  gorilla.resetPosition();
-  gorilla.spin(reverse);
-  wait(100, msec);
-  while(abs(gorilla.velocity(pct)) > 0.5  && !Controller1.ButtonX.pressing()){
-  }
-  gorilla.stop();
-  gDistance = gorilla.position(degrees);
-}
-
-void gorillaUp(){
-  gorilla.spin(fwd);
-  wait(100, msec);
-  while(abs(gorilla.velocity(pct)) > 0.5  && !Controller1.ButtonX.pressing()){
-   }
-  gorilla.stop();
-}
-
 void IntakeGo(){
   intake.spin(reverse, 100, pct);
 }
@@ -123,8 +103,6 @@ void shoot(){
   IntakeStop();
 
   double distance = lever.position(degrees);
-//   Controller1.Screen.setCursor(1,1);
-//   Controller1.Screen.print(distance);
 
     //lever.spinFor(fwd, -distance * 1.045, degrees, true);
    lever.spin(fwd, 100, pct);
@@ -164,12 +142,8 @@ void DriverLoop(){
   // double rightF = y2 - x2 - turning;
   // double rightB = y2 + x2 - turning;
 
-//   int leftF = controllerY + controllerX + turning;
-//   int leftB = controllerY - controllerX + turning;
-//   int rightF = controllerY - controllerX - turning;
-//   int rightB = controllerY + controllerX - turning;
 
-//turning set to 35% at driver request
+  //turning set to 35% at driver request
   float scaleFactor = Controller1.ButtonR2.pressing() ? 0.5f : 1;
   xdrive.setTarget((isReversed ? -1 : 1) * controllerX * scaleFactor, (isReversed ? -1 : 1) * controllerY * scaleFactor, turning*0.6f);
 
@@ -203,55 +177,35 @@ void LeverStop(){
 
 void Auton(){
 
-  Controller1.Screen.clearScreen();
-  Controller1.Screen.setCursor(1,1);
-  Controller1.Screen.print("Auton Go");
-
-  //16 pts
-  // //approach goal
-  // xdrive.move(2.1, RIGHT);
-  // xdrive.move(22.1);
-  // //turn to face goal
-  // xdrive.turnInPlace(45);
-  // shoot();
-  // xdrive.move(5, BACKWARD);
-  
-  // //
-  // xdrive.turnInPlace(-40);
-  // IntakeGo();
-  // xdrive.move(40, BACKWARD);
-  // wait(1, seconds);
-  // IntakeStop();
-
-
-  //other approach
-  xdrive.move(5, RIGHT);
-  IntakeGo();
-  xdrive.move(25);
-  xdrive.turnInPlace(90);
-  xdrive.move(10);
-  xdrive.turnInPlace(-90);
-  xdrive.move(5, BACKWARD);
-  IntakeStop();
-
-  xdrive.turnInPlace(-45);
-  xdrive.move(10);
-
 }
 
 void SetupFieldControl(){
-  comp.drivercontrol(Driver);
-  comp.autonomous(Auton);
+  if(comp.isFieldControl()){
+    comp.drivercontrol(Driver);
+    comp.autonomous(Auton);
+  }
+}
+
+void DeployMatchlaod(){
+  matchload.spinToPosition(20, degrees);
+}
+
+void StoreMatchload(){
+  matchload.spinToPosition(0, degrees);
 }
 
 void SetupControls(){
   Controller1.ButtonLeft.pressed(DescoreStore);
   Controller1.ButtonRight.pressed(Undescore);
+  Controller1.ButtonUp.pressed(liftOn);
+  Controller1.ButtonDown.pressed(liftOff);
+
   Controller1.ButtonB.pressed(DescoreToggle);
-
-
   Controller1.ButtonA.pressed(shoot);
   Controller1.ButtonY.pressed(InvertControls);
+  Controller1.ButtonX.pressed(LeverDown);
+  
+  Controller1.ButtonX.released(LeverStop);
 
   Controller1.ButtonL2.pressed(IntakeNotGoSlo);
   Controller1.ButtonL1.pressed(IntakeNotGo);
@@ -260,12 +214,6 @@ void SetupControls(){
   Controller1.ButtonL1.released(IntakeStop);
   Controller1.ButtonR1.released(IntakeStop);
   Controller1.ButtonL2.released(IntakeStop);
-
-  Controller1.ButtonUp.pressed(gorillaUp);
-  Controller1.ButtonDown.pressed(gorillaDown);
-  
-  Controller1.ButtonX.pressed(LeverDown);
-  Controller1.ButtonX.released(LeverStop);
 }
 
 void SetupImu(){
@@ -275,9 +223,9 @@ void SetupImu(){
   imu.setHeading(0, vex::deg);
   imu.setRotation(0, vex::deg);
 
-  // Controller1.Screen.clearScreen();
-  // Controller1.Screen.setCursor(1,1);
-  // Controller1.Screen.print("Imu Calibrated");
+  Controller1.Screen.clearScreen();
+  Controller1.Screen.setCursor(1,1);
+  Controller1.Screen.print("Imu Calibrated");
 }
 
 int main() {
@@ -296,12 +244,11 @@ int main() {
 
   descore.resetPosition();
   descore.spinToPosition(175, degrees);
-
+  matchload.setPosition(20, vex::rotationUnits::rev);
   
   while(1) {
-    if(!comp.isFieldControl() && !comp.isAutonomous() && !comp.isDriverControl()){
+    if(!comp.isFieldControl()){
       DriverLoop();
     }
-    wait(20, msec);
   }
 }
