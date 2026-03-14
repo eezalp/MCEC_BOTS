@@ -34,6 +34,8 @@ vex::competition comp;
 
   motor descore = motor(PORT12, ratio18_1);
 
+  motor gorilla = motor(PORT14, ratio18_1);
+
 bool isReversed = false;
 
 void liftControl(bool on){
@@ -67,6 +69,25 @@ void DescoreToggle(){
 
 void DescoreStore(){
   descore.spinToPosition(20, degrees);
+}
+
+float gDistance = 0;
+void gorillaDown(){
+  gorilla.resetPosition();
+  gorilla.spin(reverse);
+  wait(100, msec);
+  while(abs(gorilla.velocity(pct)) > 0.5  && !Controller1.ButtonX.pressing()){
+  }
+  gorilla.stop();
+  gDistance = gorilla.position(degrees);
+}
+
+void gorillaUp(){
+  gorilla.spin(fwd);
+  wait(100, msec);
+  while(abs(gorilla.velocity(pct)) > 0.5  && !Controller1.ButtonX.pressing()){
+   }
+  gorilla.stop();
 }
 
 void IntakeGo(){
@@ -181,23 +202,41 @@ void LeverStop(){
 }
 
 void Auton(){
+
   Controller1.Screen.clearScreen();
   Controller1.Screen.setCursor(1,1);
   Controller1.Screen.print("Auton Go");
-  //approach goal
-  xdrive.move(2.1, RIGHT);
-  xdrive.move(22.1);
-  //turn to face goal
-  xdrive.turnInPlace(45);
-  shoot();
-  xdrive.move(5, BACKWARD);
+
+  //16 pts
+  // //approach goal
+  // xdrive.move(2.1, RIGHT);
+  // xdrive.move(22.1);
+  // //turn to face goal
+  // xdrive.turnInPlace(45);
+  // shoot();
+  // xdrive.move(5, BACKWARD);
   
-  //
-  xdrive.turnInPlace(-40);
+  // //
+  // xdrive.turnInPlace(-40);
+  // IntakeGo();
+  // xdrive.move(40, BACKWARD);
+  // wait(1, seconds);
+  // IntakeStop();
+
+
+  //other approach
+  xdrive.move(5, RIGHT);
   IntakeGo();
-  xdrive.move(40, BACKWARD);
-  wait(1, seconds);
+  xdrive.move(25);
+  xdrive.turnInPlace(90);
+  xdrive.move(10);
+  xdrive.turnInPlace(-90);
+  xdrive.move(5, BACKWARD);
   IntakeStop();
+
+  xdrive.turnInPlace(-45);
+  xdrive.move(10);
+
 }
 
 void SetupFieldControl(){
@@ -222,8 +261,8 @@ void SetupControls(){
   Controller1.ButtonR1.released(IntakeStop);
   Controller1.ButtonL2.released(IntakeStop);
 
-  Controller1.ButtonUp.pressed(liftOn);
-  Controller1.ButtonDown.pressed(liftOff);
+  Controller1.ButtonUp.pressed(gorillaUp);
+  Controller1.ButtonDown.pressed(gorillaDown);
   
   Controller1.ButtonX.pressed(LeverDown);
   Controller1.ButtonX.released(LeverStop);
