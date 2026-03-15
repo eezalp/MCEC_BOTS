@@ -15,6 +15,7 @@ struct Vector2 {
     Vector2(float _x, float _y);
     float mag();
     float operator*(Vector2& other) const;
+    Vector2 operator*(int& scalar) const;
     Vector2 project(Vector2 other);
 };
 
@@ -32,8 +33,8 @@ struct PathPoint {
     float x, y, speed, heading;
 };
 
+enum DriveDirection { FORWARD, BACKWARD, LEFT, RIGHT };
 double Lerp(double, double, double);
-
 std::vector<PathPoint> pathFromFile(const char* filename);
 
 class XDrive {
@@ -62,11 +63,13 @@ class XDrive {
     void turnInPlace(int);
 
     
-public:
+    public:
     inertial *imu;
     XDrive(int imuPort, int frP, int brP, int flP, int blP, gearSetting ratio);
     XDrive(inertial* _imu, int frP, int brP, int flP, int blP, gearSetting ratio);
     void setTarget(float controllerX, float controllerY, float turning);
     void runPath(const char* path);
     void UpdateMotorSpeeds();
+    void move(float distance, DriveDirection dir = FORWARD);
+    void turnInPlace(float targetDeg);
 };

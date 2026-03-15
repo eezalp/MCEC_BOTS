@@ -63,7 +63,7 @@ MCEC::SwerveDrive drivetrain(
   vex::PORT3 , vex::PORT2 , vex::PORT1 , // back left // former back left
   vex::PORT8 , vex::PORT9 , vex::PORT10, // back right // former front left
   Vector2(7.25f, -1.375f), vex::PORT21, // forward encoder
-  Vector2(-4.5f, -0.125f), vex::PORT4, // lateral encoder // port 15 when driver and 4 when auton
+  Vector2(-4.5f, -0.125f), vex::PORT15, // lateral encoder // port 15 when driver and 4 when auton
   2.0f  // odom wheel radius
 );
 
@@ -146,10 +146,10 @@ void IntakeGo(){
   intakem.spin(vex::forward, 80, vex::pct);
   shoot.spin(vex::forward, 80, vex::pct);
 }
-void IntakeNotGo(){
-  intakeb.spin(vex::reverse, 80, vex::pct);
-  intakem.spin(vex::reverse, 80, vex::pct);
-  shoot.spin(vex::reverse, 80, vex::pct);
+void IntakeGoSlow(){
+  intakeb.spin(vex::forward, 80, vex::pct);
+  intakem.spin(vex::forward, 80, vex::pct);
+  shoot.spin(vex::forward, 30, vex::pct);
 }
 void IntakeStop(){
   intakeb.stop();
@@ -195,13 +195,14 @@ void Driver(){
 }
 
 void Auton(){
-  controls.controller.Screen.clearScreen();
-  drivetrain.points = {
-    {{0, 0}, 90, 90},
-    {{0, 0}, 90, 90},
-    {{0, 0}, 90, 90}
-  };
-  drivetrain.GoToPoint();
+  return;
+  // controls.controller.Screen.clearScreen();
+  // drivetrain.points = {
+  //   {{0, 0}, 90, 90},
+  //   {{0, 0}, 90, 90},
+  //   {{0, 0}, 90, 90}
+  // };
+  // drivetrain.GoToPoint();
 }
 
 void ResetPosition(){
@@ -226,8 +227,8 @@ void FaceRight(){
 
 
 #define STORED_POS 3.0f
-#define HIGOAL_POS 2.2f
-#define TARGET_POS 2.0f
+#define HIGOAL_POS 2.0f
+#define TARGET_POS 1.6f
 void StepDescoreForward(){
   controls.controller.Screen.setCursor(2, 1);
   controls.controller.Screen.print("Forward");
@@ -236,19 +237,19 @@ void StepDescoreForward(){
       descore = DescorePositions::Targeting;
       controls.controller.Screen.setCursor(1, 1);
       controls.controller.Screen.print("Target  ");
-      descoreMotor.spinToPosition(TARGET_POS, vex::rotationUnits::rev, true);
+      descoreMotor.spinToPosition(TARGET_POS, vex::rotationUnits::rev, false);
       break;
     case DescorePositions::Targeting:
       descore = DescorePositions::HighGoal;
       controls.controller.Screen.setCursor(1, 1);
       controls.controller.Screen.print("HighGoal");
-      descoreMotor.spinToPosition(HIGOAL_POS, vex::rotationUnits::rev, true);
+      descoreMotor.spinToPosition(HIGOAL_POS, vex::rotationUnits::rev, false);
       break;
     case DescorePositions::HighGoal:
       descore = DescorePositions::Stored;
       controls.controller.Screen.setCursor(1, 1);
       controls.controller.Screen.print("Stored  ");
-      descoreMotor.spinToPosition(STORED_POS, vex::rotationUnits::rev, true);
+      descoreMotor.spinToPosition(STORED_POS, vex::rotationUnits::rev, false);
       break;
   }
 }
@@ -259,15 +260,15 @@ void StepDescoreBackward(){
   switch(descore){
     case DescorePositions::Stored:
       descore = DescorePositions::HighGoal;
-      descoreMotor.spinToPosition(HIGOAL_POS, vex::rotationUnits::rev, true);
+      descoreMotor.spinToPosition(HIGOAL_POS, vex::rotationUnits::rev, false);
       break;
     case DescorePositions::Targeting:
       descore = DescorePositions::Stored;
-      descoreMotor.spinToPosition(STORED_POS, vex::rotationUnits::rev, true);
+      descoreMotor.spinToPosition(STORED_POS, vex::rotationUnits::rev, false);
       break;
     case DescorePositions::HighGoal:
       descore = DescorePositions::Targeting;
-      descoreMotor.spinToPosition(TARGET_POS, vex::rotationUnits::rev, true);
+      descoreMotor.spinToPosition(TARGET_POS, vex::rotationUnits::rev, false);
       break;
   }
 }
@@ -283,8 +284,8 @@ void EnableForward(){
 void SetControls(){
   controls.L2.SetOnPress(IntakeGo);
   controls.L1.SetOnPress(IntakeStore);
-  controls.R1.SetOnPress(IntakeNotStore);
-  controls.R2.SetOnPress(IntakeNotGo);
+  controls.R1.SetOnPress(IntakeGoSlow);
+  controls.R2.SetOnPress(IntakeNotStore);
 
   controls.Down.SetOnPress(TurretDown);
   controls.Up.SetOnPress(TurretUp);
@@ -299,6 +300,7 @@ void SetControls(){
 
   // controls.Down.SetOnPress(FaceDriver);
   // controls.Up.SetOnPress(FaceOpponent);
+  controls.Right.SetOnPress(StepDescoreForward);
   controls.Left.SetOnPress(StepDescoreBackward);
 
   controls.R1.SetOnRelease(IntakeStop);
@@ -325,16 +327,12 @@ void SetupFieldControl(){
   }
 }
 
-void SetAutonPath(){
-}
-
 //what does PID stand for????
 //PROPORTIONAL, INTEGRAL, DERIVATIVE
 float PID[] = {0.5f, 0.05f, 0.02f};
 
 int main(){
   descoreMotor.setPosition(3, vex::rotationUnits::rev);
-  SetAutonPath();
   
   InitInertial();
   SetControls();

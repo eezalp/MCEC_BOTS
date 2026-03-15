@@ -432,12 +432,12 @@ float WrapAngle(float angle) {
     
     volatile float topPower = move - (rot * 100.0f);
     volatile float botPower = move + (rot * 100.0f);
-    // if(screen < 4){
-    //   controls.controller.Screen.setCursor(2, 1);
-    //   controls.controller.Screen.print("%.2f, %.2f", topPower, move - (rot * 100.0f));
-    //   controls.controller.Screen.setCursor(3, 1);
-    //   controls.controller.Screen.print("%.2f, %.2f", move, rot);
-    // }
+    if(screen < 4){
+      controls.controller.Screen.setCursor(2, 1);
+      controls.controller.Screen.print("%.2f, %.2f", topPower, move - (rot * 100.0f));
+      controls.controller.Screen.setCursor(3, 1);
+      controls.controller.Screen.print("%.2f, %.2f", move, rot);
+    }
     float maxPower = max2(abs2(topPower), abs2(botPower));
     if (maxPower > MAX_MOTOR_POWER) {
       topPower *= MAX_MOTOR_POWER / maxPower;
@@ -646,10 +646,10 @@ float WrapAngle(float angle) {
     driveVector = driveVector.Normalize();
 
     screenMutex.lock();
-    controls.controller.Screen.setCursor(1, 1);
-    controls.controller.Screen.print("%.2f, %.2f", rotationPower, angleDiff);
-    controls.controller.Screen.setCursor(3, 1);
-    controls.controller.Screen.print("%.2f, %.2f", rotationPower * 30, driveVector * power * -50);
+    // controls.controller.Screen.setCursor(1, 1);
+    // controls.controller.Screen.print("%.2f, %.2f", rotationPower, angleDiff);
+    // controls.controller.Screen.setCursor(3, 1);
+    // controls.controller.Screen.print("%.2f, %.2f", rotationPower * 30, driveVector * power * -50);
     screenMutex.unlock();
 
     Drive(driveVector * power * 50, rotationPower * 30);
@@ -729,7 +729,7 @@ float WrapAngle(float angle) {
       // angleDiff = 30;
       autonRotationPID.Reset();
       autonMovePID.Reset();
-      while(direction.GetMagnitude() > 0.1f || abs2(angleDiff) > 3){
+      while(direction.GetMagnitude() > 0.1f || angleDiff > 3){
         curTime = vex::timer::system();
         dt = (curTime - lastTime)/1000.0f;
         lastTime = curTime;
@@ -751,15 +751,14 @@ float WrapAngle(float angle) {
 
       Stop();
     }
-    controls.controller.Screen.clearScreen();
-    controls.controller.Screen.setCursor(1, 1);
-    controls.controller.Screen.print("Auton done");
-    controls.controller.Screen.setCursor(2, 1);
-    controls.controller.Screen.print("%d:%.2f", angleDiff > 3,angleDiff);
-    controls.controller.Screen.setCursor(3, 1);
-    controls.controller.Screen.print("%.2f, %.2f", p.heading, inertial.heading());
+    // controls.controller.Screen.clearScreen();
+    // controls.controller.Screen.setCursor(1, 1);
+    // controls.controller.Screen.print("Auton done");
+    // controls.controller.Screen.setCursor(2, 1);
+    // controls.controller.Screen.print("%d:%.2f", angleDiff > 3,angleDiff);
+    // controls.controller.Screen.setCursor(3, 1);
+    // controls.controller.Screen.print("%.2f, %.2f", p.heading, inertial.heading());
 
     runningAuton = false;
   }
-//
 }

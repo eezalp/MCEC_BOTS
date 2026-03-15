@@ -36,6 +36,7 @@ vex::competition comp;
   motor matchload = motor(PORT11);
 
 bool isReversed = false;
+bool autonRunning = false;
 
 void liftControl(bool on){
   lift = on;
@@ -115,7 +116,7 @@ void shoot(){
 
 void DriverLoop(){
   Brain.Screen.render();
-
+  if(autonRunning) return;
   int controllerX = Controller1.Axis4.position(); //* 2;
   int controllerY = Controller1.Axis3.position(); //* 2;
   int turning = Controller1.Axis1.position(); //* 2;
@@ -176,7 +177,55 @@ void LeverStop(){
 }
 
 void Auton(){
+  autonRunning = true;
+  Controller1.Screen.clearScreen();
+  Controller1.Screen.setCursor(1,1);
+  Controller1.Screen.print("Auton Go");
 
+  // xdrive.move(5.0f, RIGHT);
+  // IntakeGo();
+  // xdrive.move(25.0f);
+  // xdrive.turnInPlace(90.0f);
+  // xdrive.move(10.0f);
+  // xdrive.turnInPlace(-90.0f);
+  // xdrive.move(5.0f, BACKWARD);
+  // IntakeStop();
+
+  // xdrive.turnInPlace(-45.0f);
+  // xdrive.move(10.0f);
+  
+  //start
+  xdrive.move(1, LEFT);
+
+  xdrive.turnInPlace(47.86f-90);
+  IntakeGo();
+  xdrive.move(26.0f, BACKWARD);
+
+  vex::this_thread::sleep_for(400);
+  IntakeStop();
+
+  xdrive.move(29.3f, FORWARD);
+  xdrive.move(19.8f, RIGHT);
+  // end
+  // start of plan https://www.desmos.com/calculator/peixhszlp3
+  // xdrive.turnInPlace(90 - 48.65f);
+  // xdrive.move(33.3f, BACKWARD);
+  
+  // xdrive.turnInPlace(53.57f + 180);
+  // xdrive.move(52.2f, BACKWARD);
+  
+  // xdrive.turnInPlace(-90.0f + 180);
+  // xdrive.move(116.0f, BACKWARD);
+  
+  // xdrive.turnInPlace(112.7f + 180);
+  // xdrive.move(80.23f, BACKWARD);
+  
+  // xdrive.turnInPlace(180.0f + 180);
+  // xdrive.move(56.0f, BACKWARD);
+  
+  // xdrive.turnInPlace(-146.3f + 180);
+  // xdrive.move(28.84f, BACKWARD);
+  autonRunning = false;
 }
 
 void SetupFieldControl(){
@@ -244,6 +293,7 @@ int main() {
 
   descore.resetPosition();
   descore.spinToPosition(175, degrees);
+  DescoreStore();
   matchload.setPosition(20, vex::rotationUnits::rev);
   
   while(1) {

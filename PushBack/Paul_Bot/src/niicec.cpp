@@ -20,6 +20,9 @@ float Vector2::mag() {
 float Vector2::operator*(Vector2& other) const {
     return other.x * x + other.y * y;
 }
+Vector2 Vector2::operator*(int& other) const {
+    return Vector2(x * other, y * other);
+}
 
 Vector2 Vector2::project(Vector2 other) {
     float scaleFactor = (*this * other) / pow(mag(), 2);
@@ -82,6 +85,19 @@ XDrive::XDrive(inertial* _imu, int frP, int brP, int flP, int blP, gearSetting r
       headingPID(0.8, 0.0, 0.05), targetHeading(0), imu(_imu) {}
 
 void XDrive::setVel(double _LF, double _LB, double _RF, double _RB) {
+    double max = _LF;
+
+    if(fabs(_LB) > max) max = fabs(_LB);
+    if(fabs(_RF) > max) max = fabs(_RF);
+    if(fabs(_RB) > max) max = fabs(_RB);
+
+    if(max > 100){
+        _LF *= 100.0f/max;
+        _LB *= 100.0f/max;
+        _RF *= 100.0f/max;
+        _RB *= 100.0f/max;
+    }
+
     LF = _LF;
     LB = _LB;
     RF = _RF;
@@ -172,7 +188,7 @@ void XDrive::runPath(const char* path) {
 }
 
 
-float wheelDiameter = 2.75;
+float wheelDiameter = 3.25;
 
 //@param distance 
 void XDrive::driveForward(int distance){
@@ -197,4 +213,59 @@ void XDrive::turnInPlace(int degrees){
     while(fabs(imu->heading() - degrees) > 1){
         setTarget(0, 0, 1);
     }
+}
+#define AUTONSPEED 0.25f
+void XDrive::move(float distance, DriveDirection dir){
+    float trueDistance = fabs(distance / (wheelDiameter * M_PI) * 360.0f);
+    float FLStart = Fleft.position(degrees);
+    float FRStart = Fright.position(degrees);
+    float BLStart = Bleft.position(degrees);
+    float BRStart = Bright.position(degrees);
+    Vector2 fwdVec(
+        dir == FORWARD ? 100.0f : dir == BACKWARD ? -100.0f : 0.0f,
+        dir == LEFT    ? 100.0f : dir == RIGHT     ? -100.0f : 0.0f
+    );
+    Brain.Screen.clearScreen();
+    Brain.Screen.setCursor(1, 1);
+    Brain.Screen.print("tgt:%.0f", trueDistance);
+    Brain.Screen.render();
+    // wait(1000, msec);
+    headingPID.reset();
+    float startHeading = imu->rotation();
+    vex::timer t;
+    t.reset();
+    float correction = 0;
+    while(
+        (
+            fabs(Fleft.position(degrees) - FLStart) +
+            fabs(Fright.position(degrees) - FRStart) +
+            fabs(Bleft.position(degrees) - BLStart) +
+            fabs(Bright.position(degrees) - BRStart)
+        ) / 4 < trueDistance && t.time(msec) < 5000){
+        correction = headingPID.update(startHeading, imu->rotation());
+        setVel(
+             FleftV * fwdVec * -AUTONSPEED + correction,
+             BleftV * fwdVec *  AUTONSPEED + correction,
+            FrightV * fwdVec *  AUTONSPEED - correction,
+            BrightV * fwdVec * -AUTONSPEED - correction
+        );
+        wait(20, msec);
+    }
+    Stop();
+    
+}
+void XDrive::turnInPlace(float targetDeg){
+    PID pid(1.2f, 0.0f, 0.2f);
+    float diff;
+    do {
+        diff = targetDeg - imu->heading();
+        while(diff > 180) diff -= 360;
+        while(diff < -180) diff += 360;
+        float output = pid.update(diff, 0);
+        if(output > 100) output = 100;
+        if(output < -100) output = -100;
+        setVel(output, output, -output, -output);
+        wait(20, msec);
+    } while(fabs(diff) > 1);
+    Stop();
 }
