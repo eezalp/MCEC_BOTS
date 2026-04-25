@@ -35,6 +35,13 @@ namespace MCEC{
   extern vex::mutex screenMutex;
   float abs2(float n);
   float AngleDiff(float a_1, float a_2);
+  float WrapAngle(float a);
+
+  
+  template <typename T>
+  T inline max2(T a, T b){
+    return a > b ? a : b;
+  }
 
   template <typename T>
   inline T Clamp(T a, T t, T b){
@@ -277,11 +284,123 @@ namespace MCEC{
       float wheelRadius;
   };
 
-  class SwerveDrive;
-
-  class SwervePod{
+  class CoSwerveDrive;
+  struct CoSwervePodSettings{
+    int32_t axisPin, drivePin;
+    float rotationPower = 100.0f;
+    float axisGearRatio = 1;
+    int maxPower = 100;
+  };
+  class CoSwervePod{
     public:
       int screen = 1;
+      RotationPID rotationPID;
+      Vector2 relPos;
+      const static int MAX_MOTOR_POWER = 100;
+      const static constexpr float MAX_ROTATION_POWER = 100.0f;
+      const static constexpr float MAX_ROTATION_ANGLE = 90;
+      bool atTarget = false;
+      void SetPowers(float move, float rot, bool straight = false);
+      void GoToVector(Vector2 targ, bool canForward = false, float dt = 0);
+      void Brake(vex::brakeType br);
+      float GetAngle();
+      float CalcWub(float);
+      Vector2 GetTraveled(float dt, float wub);
+      void SetRotationOffset(float _off);
+      void SetPIDVariables(float P, float I, float D);
+      bool IsMoving();
+      CoSwervePod(CoSwervePodSettings settings, CoSwerveDrive* drivetrain) : 
+        axis(settings.axisPin), drive(settings.drivePin), 
+        axisRatio(settings.axisGearRatio), master(drivetrain) 
+      {}
+      CoSwervePod(int32_t _axis, int32_t _drive, float axisGearRatio, CoSwerveDrive* drivetrain) : 
+        axis(_axis), drive(_drive), 
+        axisRatio(axisGearRatio), master(drivetrain) 
+      {}
+
+    private:
+      const static Vector2 MOTOR_TOP_VECTOR;
+      const static Vector2 MOTOR_BOT_VECTOR;
+      float lastTime, axisRatio;
+      vex::motor axis, drive;
+      bool onShortest = false, reversed = false;
+      float rotationOffset = 0.0f;
+      float delTop, delBot;
+      CoSwerveDrive* master;
+
+  };
+  class CoSwerveDrive{
+    public:
+      CoSwerveDrive(
+        CoSwervePodSettings FL, CoSwervePodSettings FR,
+        CoSwervePodSettings BL, CoSwervePodSettings BR,
+        float _wheelBase, 
+        float _trackWidth
+      ) :
+        frontLeft(FL, this), frontRight(FR, this),
+        backLeft(BL, this), backRight(BR, this),
+        wheelbase(_wheelBase), trackwidth(_trackWidth)
+      {}
+      CoSwerveDrive(
+        int32_t FLa, int32_t FLd, float FLratio,
+        int32_t FRa, int32_t FRd, float FRratio,
+        int32_t BLa, int32_t BLd, float BLratio,
+        int32_t BRa, int32_t BRd, float BRratio,
+        float _wheelBase, 
+        float _trackWidth
+      ) :
+        frontLeft(FLa, FLd, FLratio, this), frontRight(FRa, FRd, FRratio, this),
+        backLeft(BLa, BLd, BLratio, this), backRight(BRa, BRd, BRratio, this),
+        wheelbase(_wheelBase), trackwidth(_trackWidth)
+      {}
+      void Stop(vex::brakeType br = vex::brakeType::hold);
+      void Drive(Vector2 driveVector, float rotationSpeed);
+      void SetRotationOffsets(float, float, float, float);
+      void GoToPoint();
+      void FaceDirection(float direction);
+      void UpdatePosition(float dt);
+      void AutonMove(Vector2 driveVector, float targetHeading, float dt);
+      void UpdatePositionUsingAccel(float);
+      void UpdatePositionUsingEncoder(float);
+      void UpdatePositionUsingOdom(float);
+      void SetAutonPIDVariables(float, float, float, float, float, float);
+      void Initialize();
+
+      Vector2 currentPos;
+      
+      CoSwervePod frontLeft, frontRight, backLeft, backRight;
+      std::vector<PathPoint> points;
+      bool canForward = true;
+      bool runningAuton = false;
+    private:
+      bool isInitialized = false;
+      const static int MAX_MODULE_OUTPUT = 100;
+      float wheelbase  = (12.75f + 11.75f) / 2;
+      float trackwidth = (14.125f + 13.125f) / 2;
+      PID autonMovePID;
+      RotationPID autonRotationPID;
+      Vector2 currentVel, currentAccel;
+  };
+
+  class DiffSwerveDrive;
+  struct DiffSwervePodSettings{
+    int32_t topPin, botPin;
+    int32_t rotationPin;
+    float rotationPower = 100.0f;
+    int maxPower = 100, topDir, botDir;
+    DiffSwervePodSettings(int32_t _topPin, vex::directionType _topDir, int32_t _botPin, vex::directionType _botDir, int32_t _rotationPin, float _rotationPower = 100, int _maxPower = 100) : 
+      topPin(_topPin), topDir(static_cast<int>(_topDir)),
+      botPin(_botPin), botDir(static_cast<int>(_botDir)),
+      rotationPin(_rotationPin), rotationPower(_rotationPower),
+      maxPower(_maxPower)
+    {}
+  };
+
+  class DiffSwervePod{
+    public:
+      int screen = 1;
+      int topDir = 1;
+      int botDir = 1;
       RotationPID rotationPID;
       vex::rotation rotation;
       Vector2 relPos;
@@ -301,7 +420,7 @@ namespace MCEC{
       void SetPIDVariables(float P, float I, float D);
       bool IsMoving();
 
-      SwervePod(int32_t t, int32_t b, int32_t r, SwerveDrive* drivetrain) : top(t), bottom(b), rotation(r), master(drivetrain) {}
+      DiffSwervePod(int32_t t, int32_t b, int32_t r, DiffSwerveDrive* drivetrain) : top(t), bottom(b), rotation(r), master(drivetrain) {}
 
     private:
       const static Vector2 MOTOR_TOP_VECTOR;
@@ -311,25 +430,57 @@ namespace MCEC{
       bool onShortest = false, reversed = false;
       float rotationOffset = 0.0f;
       float delTop, delBot;
-      SwerveDrive* master;
+      DiffSwerveDrive* master;
   };
 
-  class SwerveDrive {
+  class DiffSwerveDrive {
     public:
 
-      SwerveDrive(
+      DiffSwerveDrive(
+        DiffSwervePodSettings FL,
+        DiffSwervePodSettings FR,
+        DiffSwervePodSettings BL,
+        DiffSwervePodSettings BR,
+        Vector2 forwardOffset, int32_t forwardPort,
+        Vector2 lateralOffset, int32_t lateralPort,
+        float odomWheelDiameter,
+        float _wheelBase = (12.75f + 11.75f) / 2, 
+        float _trackWidth = (14.125f + 13.125f) / 2
+      ) :
+        frontLeft(FL.topPin, FL.botPin, FL.rotationPin, this), frontRight(FR.topPin, FR.botPin, FR.rotationPin, this),
+        backLeft(BL.topPin, BL.botPin, BL.rotationPin, this), backRight(BR.topPin, BR.botPin, BR.rotationPin, this),
+        forward(forwardOffset, forwardPort, odomWheelDiameter / 2),
+        lateral(lateralOffset, lateralPort, odomWheelDiameter / 2),
+        wheelbase(_wheelBase), trackwidth(_trackWidth)
+      {
+        frontLeft.topDir  = FL.topDir;
+        frontLeft.botDir  = FL.botDir;
+        
+        frontRight.topDir = FR.topDir;
+        frontRight.botDir = FR.botDir;
+        
+        backLeft.topDir   = BL.topDir;
+        backLeft.botDir   = BL.botDir;
+        
+        backRight.topDir  = BR.topDir;
+        backRight.botDir  = BR.botDir;
+      }
+      DiffSwerveDrive(
         int32_t FLt, int32_t FLb, int32_t FLr,
         int32_t FRt, int32_t FRb, int32_t FRr,
         int32_t BLt, int32_t BLb, int32_t BLr,
         int32_t BRt, int32_t BRb, int32_t BRr,
         Vector2 forwardOffset, int32_t forwardPort,
         Vector2 lateralOffset, int32_t lateralPort,
-        float odomWheelDiameter
+        float odomWheelDiameter,
+        float _wheelBase = (12.75f + 11.75f) / 2, 
+        float _trackWidth = (14.125f + 13.125f) / 2
       ) :
         frontLeft(FLt, FLb, FLr, this), frontRight(FRt, FRb, FRr, this),
         backLeft(BLt, BLb, BLr, this), backRight(BRt, BRb, BRr, this),
         forward(forwardOffset, forwardPort, odomWheelDiameter / 2),
-        lateral(lateralOffset, lateralPort, odomWheelDiameter / 2)
+        lateral(lateralOffset, lateralPort, odomWheelDiameter / 2),
+        wheelbase(_wheelBase), trackwidth(_trackWidth)
       {}
       void Stop(vex::brakeType br = vex::brakeType::hold);
       void Drive(Vector2 driveVector, float rotationSpeed);
@@ -342,14 +493,16 @@ namespace MCEC{
       void UpdatePositionUsingEncoder(float);
       void UpdatePositionUsingOdom(float);
       void SetAutonPIDVariables(float, float, float, float, float, float);
+      void Initialize();
 
       Vector2 currentPos;
       
-      SwervePod frontLeft, frontRight, backLeft, backRight;
+      DiffSwervePod frontLeft, frontRight, backLeft, backRight;
       std::vector<PathPoint> points;
       bool canForward = true;
       bool runningAuton = false;
     private:
+      bool isInitialized = false;
       const static int MAX_MODULE_OUTPUT = 100;
       float wheelbase  = (12.75f + 11.75f) / 2;
       float trackwidth = (14.125f + 13.125f) / 2;

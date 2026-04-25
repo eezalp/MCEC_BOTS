@@ -44,6 +44,10 @@ struct Vector2{
     //
     static const Vector2 zero, up, down, left, right;
     private:
+      bool magnitudeDirty = true;
+      float magnitude = 0;
+      float angle = 0;
+      float lastXm, lastXa, lastYm, lastYa;
 };
 
 

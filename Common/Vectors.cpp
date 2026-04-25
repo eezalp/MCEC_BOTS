@@ -7,19 +7,28 @@
   const Vector2 Vector2::down  = { 0, -1}; 
   const Vector2 Vector2::left  = {-1,  0};
   const Vector2 Vector2::right = { 1,  0};
-  Vector2::Vector2(Vector2 direction, float magnitude){
+  Vector2::Vector2(Vector2 direction, float _magnitude){
     direction.Normalize();
-    direction *= magnitude;
+    direction *= _magnitude;
+    magnitude = _magnitude;
     x = direction.x;
     y = direction.y;
   }
   Vector2::Vector2(Vector2 final, Vector2 initial){
     x = final.x - initial.x;
     y = final.y - initial.y;
+    GetMagnitude();
+    GetAngle();
   }
 
   float Vector2::GetMagnitude(){
-    return std::sqrt(x*x + y*y);
+    // static float lastX = 0, lastY = 0;
+    if(x != lastXm || y != lastYm){
+      magnitude = std::sqrt(x*x + y*y);
+    }
+    lastXm = x;
+    lastYm = y;
+    return magnitude;
   }
 
   Vector2& Vector2::Rotate(float deg){
@@ -31,7 +40,13 @@
   }
 
   float Vector2::GetAngle(){
-    return std::atan2(y, x) * (180.0f/M_PI);
+    // static float lastX = 0, lastY = 0;
+    if(x != lastXa || y != lastYa){
+      angle = std::atan2(y, x) * (180.0f/M_PI);
+    }
+    lastXa = x;
+    lastYa = y;
+    return angle;
   }
 
   Vector2& Vector2::Normalize(){
@@ -40,8 +55,6 @@
     y /= mag;
     return *this;
   }
-
-  
 
   Vector2& Vector2::Project(Vector2 destination){
     Vector2 source = Vector2(x, y);
