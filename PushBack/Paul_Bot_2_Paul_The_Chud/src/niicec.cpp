@@ -1,4 +1,5 @@
 #include "../include/niicec.h"
+#include <cmath>
 
 // Lerp
 
@@ -27,6 +28,14 @@ Vector2 Vector2::operator*(int& other) const {
 Vector2 Vector2::project(Vector2 other) {
     float scaleFactor = (*this * other) / pow(mag(), 2);
     return Vector2(scaleFactor * x, scaleFactor * y);
+}
+
+Vector2& Vector2::rotate(float deg){
+    float r = deg * (M_PI / 180.0f);
+    float newX = x * std::cos(r) - y * std::sin(r);
+    y = x * std::sin(r) + y * std::cos(r);
+    x = newX;
+    return *this;
 }
 
 // PID
@@ -155,12 +164,23 @@ void XDrive::setTarget(float controllerX, float controllerY, float turning) {
 
 
     if (controllerX != 0 || controllerY != 0 || turning != 0) {
-        setVel(
-            FleftV * target + turning + correction,
-            BleftV * target + turning + correction,
-            FrightV * target - turning - correction,
-            BrightV * target - turning - correction
-        );
+        if(!fieldOriented){
+            setVel(
+                FleftV * target + turning + correction,
+                BleftV * target + turning + correction,
+                FrightV * target - turning - correction,
+                BrightV * target - turning - correction
+            );
+        }else{
+            Vector2 fieldTarget = target;
+            fieldTarget.rotate(-imu->heading());
+            setVel(
+                FleftV * fieldTarget + turning + correction,
+                BleftV * fieldTarget + turning + correction,
+                FrightV * fieldTarget - turning - correction,
+                BrightV * fieldTarget - turning - correction
+            );
+        }
     } else {
         Stop();
     }

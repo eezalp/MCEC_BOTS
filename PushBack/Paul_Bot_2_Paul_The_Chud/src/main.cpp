@@ -20,17 +20,24 @@ vex::competition comp;
   controller Controller1 = controller(primary);
 
 
+  //TODO:
+  //Change lever to 1 motor C
+  //Toggleable between field and robot oriented driving
+
+
+
   inertial imu =  inertial(PORT9);
   XDrive xdrive (&imu, 12, 16, 17, 14, ratio18_1);
 
-  digital_out lift = digital_out(Brain.ThreeWirePort.B);
-  //digital_out descore = digital_out(Brain.ThreeWirePort.E);
-
   motor intake = motor(PORT16, ratio18_1, false);
+  //#ratio doesn't matter if you use pct always
+  motor scoring = motor(PORT20, ratio18_1, false);
 
   motor lever = motor(PORT19, ratio36_1, true);
-  limit leverLimit = limit(Brain.ThreeWirePort.A);
-  limit leverLimit1 = limit(Brain.ThreeWirePort.G);
+  // limit leverLimit = limit(Brain.ThreeWirePort.A);
+
+
+  // limit leverLimit1 = limit(Brain.ThreeWirePort.G);
 
   motor descore = motor(PORT12, ratio18_1);
   motor matchload = motor(PORT11);
@@ -38,17 +45,17 @@ vex::competition comp;
 bool isReversed = false;
 bool autonRunning = false;
 
-void liftControl(bool on){
-  lift = on;
-}
+// void liftControl(bool on){
+//   lift = on;
+// }
 
-void liftOn(){
-  liftControl(true);
-}
+// void liftOn(){
+//   liftControl(true);
+// }
 
-void liftOff(){
-  liftControl(false);
-}
+// void liftOff(){
+//   liftControl(false);
+// }
 
 void Undescore();
 
@@ -73,10 +80,12 @@ void DescoreStore(){
 
 void IntakeGo(){
   intake.spin(reverse, 100, pct);
+  scoring.spin(reverse, 100, pct);
 }
 
 void IntakeNotGo(){
   intake.spin(fwd, 100, pct);
+  scoring.spin(fwd, 100, pct);
 }
 
 void IntakeNotGoSlo(){
@@ -85,34 +94,35 @@ void IntakeNotGoSlo(){
 
 void IntakeStop(){
   intake.stop();
+  scoring.stop();
 }
 
 void InvertControls(){
   isReversed = !isReversed;
 }
 
-void shoot(){
-  lever.resetPosition();
-  IntakeGo();
-  while(!leverLimit.pressing() && !leverLimit1.pressing()){
-    if(!lift)
-        lever.spin(reverse, 50, pct);
-    else
-        lever.spin(reverse, 100, pct);
-  }
-  lever.stop();
-  IntakeStop();
+// void shoot(){
+//   lever.resetPosition();
+//   IntakeGo();
+//   while(!leverLimit.pressing() && !leverLimit1.pressing()){
+//     if(!lift)
+//         lever.spin(reverse, 50, pct);
+//     else
+//         lever.spin(reverse, 100, pct);
+//   }
+//   lever.stop();
+//   IntakeStop();
 
-  double distance = lever.position(degrees);
+//   double distance = lever.position(degrees);
 
-    //lever.spinFor(fwd, -distance * 1.045, degrees, true);
-   lever.spin(fwd, 100, pct);
-  while((abs(lever.velocity(pct) > 0.5) || abs(lever.position(degrees)/distance) > 0.5f)  && !Controller1.ButtonX.pressing()){
-    lever.spin(fwd, 100, pct);
-  }
-  lever.stop();
+//     //lever.spinFor(fwd, -distance * 1.045, degrees, true);
+//    lever.spin(fwd, 100, pct);
+//   while((abs(lever.velocity(pct) > 0.5) || abs(lever.position(degrees)/distance) > 0.5f)  && !Controller1.ButtonX.pressing()){
+//     lever.spin(fwd, 100, pct);
+//   }
+//   lever.stop();
 
-}
+// }
 
 void DriverLoop(){
   Brain.Screen.render();
@@ -200,7 +210,7 @@ void Auton(){
   //turn to face goal
   xdrive.turnInPlace(43.5f);
   xdrive.move(5.9, FORWARD);
-  shoot();
+  //shoot();
   xdrive.move(10.85, BACKWARD);
   
   //
@@ -298,11 +308,11 @@ void StoreMatchload(){
 void SetupControls(){
   Controller1.ButtonLeft.pressed(DescoreStore);
   Controller1.ButtonRight.pressed(Undescore);
-  Controller1.ButtonUp.pressed(liftOn);
-  Controller1.ButtonDown.pressed(liftOff);
+  // Controller1.ButtonUp.pressed(liftOn);
+  // Controller1.ButtonDown.pressed(liftOff);
 
   Controller1.ButtonB.pressed(DescoreToggle);
-  Controller1.ButtonA.pressed(shoot);
+  // Controller1.ButtonA.pressed(shoot);
   Controller1.ButtonY.pressed(InvertControls);
   Controller1.ButtonX.pressed(LeverDown);
   

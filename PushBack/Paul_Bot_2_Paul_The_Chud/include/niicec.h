@@ -17,6 +17,8 @@ struct Vector2 {
     float operator*(Vector2& other) const;
     Vector2 operator*(int& scalar) const;
     Vector2 project(Vector2 other);
+
+    Vector2& Vector2::rotate(float deg);
 };
 
 struct PID {
@@ -38,6 +40,8 @@ double Lerp(double, double, double);
 std::vector<PathPoint> pathFromFile(const char* filename);
 
 class XDrive {
+
+
     motor Fright;
     Vector2 FrightV;
 
@@ -64,6 +68,7 @@ class XDrive {
 
     
     public:
+    bool fieldOriented;
     inertial *imu;
     XDrive(int imuPort, int frP, int brP, int flP, int blP, gearSetting ratio);
     XDrive(inertial* _imu, int frP, int brP, int flP, int blP, gearSetting ratio);
