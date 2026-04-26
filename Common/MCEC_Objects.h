@@ -501,6 +501,7 @@ namespace MCEC{
       std::vector<PathPoint> points;
       bool canForward = true;
       bool runningAuton = false;
+      OdomPod forward, lateral;
     private:
       bool isInitialized = false;
       const static int MAX_MODULE_OUTPUT = 100;
@@ -509,7 +510,6 @@ namespace MCEC{
       PID autonMovePID;
       RotationPID autonRotationPID;
       Vector2 currentVel, currentAccel;
-      OdomPod forward, lateral;
   };
 
   float Lerp(float a, float b, float t);
