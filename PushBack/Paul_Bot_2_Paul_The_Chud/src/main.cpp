@@ -26,21 +26,24 @@ vex::competition comp;
 
 
 
-  inertial imu =  inertial(PORT9);
-  XDrive xdrive (&imu, 12, 16, 17, 14, ratio18_1);
+  inertial imu =  inertial(PORT5);
 
-  motor intake = motor(PORT16, ratio18_1, false);
+  //THESE ARE INTSSSSS THEY ARE INDEXED FROM ZERO
+  //HELP ME HEEEEELP MEEEEE
+  XDrive xdrive (&imu, 0, 19, 9, 10, ratio6_1);
+
+  motor intake = motor(PORT2, ratio18_1, false);
   //#ratio doesn't matter if you use pct always
-  motor scoring = motor(PORT20, ratio18_1, false);
+  motor scoring = motor(PORT9, ratio18_1, true);
 
-  motor lever = motor(PORT19, ratio36_1, true);
+  // motor lever = motor(PORT19, ratio36_1, true);
   // limit leverLimit = limit(Brain.ThreeWirePort.A);
 
 
   // limit leverLimit1 = limit(Brain.ThreeWirePort.G);
 
   motor descore = motor(PORT12, ratio18_1);
-  motor matchload = motor(PORT11);
+  // motor matchload = motor(PORT11);
 
 bool isReversed = false;
 bool autonRunning = false;
@@ -83,13 +86,17 @@ void IntakeGo(){
   scoring.spin(reverse, 100, pct);
 }
 
+void IntakeStore(){
+  scoring.spin(reverse, 100, pct);
+}
+
 void IntakeNotGo(){
   intake.spin(fwd, 100, pct);
   scoring.spin(fwd, 100, pct);
 }
 
 void IntakeNotGoSlo(){
-  intake.spin(fwd, 40, pct);
+  scoring.spin(fwd, 40, pct);
 }
 
 void IntakeStop(){
@@ -179,116 +186,116 @@ void Driver(){
   }
 }
 
-void LeverDown(){
-  lever.spin(forward, 100, pct);
-}
-void LeverStop(){
-  lever.stop();
-}
+// void LeverDown(){
+//   lever.spin(forward, 100, pct);
+// }
+// void LeverStop(){
+//   lever.stop();
+// }
 
 void Auton(){
-  autonRunning = true;
-  Controller1.Screen.clearScreen();
-  Controller1.Screen.setCursor(1,1);
-  Controller1.Screen.print("Auton Go");
+  // autonRunning = true;
+  // Controller1.Screen.clearScreen();
+  // Controller1.Screen.setCursor(1,1);
+  // Controller1.Screen.print("Auton Go");
 
-  // xdrive.move(5.0f, RIGHT);
-  // IntakeGo();
-  // xdrive.move(25.0f);
-  // xdrive.turnInPlace(90.0f);
-  // xdrive.move(10.0f);
-  // xdrive.turnInPlace(-90.0f);
-  // xdrive.move(5.0f, BACKWARD);
+  // // xdrive.move(5.0f, RIGHT);
+  // // IntakeGo();
+  // // xdrive.move(25.0f);
+  // // xdrive.turnInPlace(90.0f);
+  // // xdrive.move(10.0f);
+  // // xdrive.turnInPlace(-90.0f);
+  // // xdrive.move(5.0f, BACKWARD);
+  // // IntakeStop();
+
+  // // xdrive.turnInPlace(-45.0f);
+  // // xdrive.move(10.0f);
+
+  // //approach goal
+  // xdrive.move(2.1, RIGHT);
+  // xdrive.move(22.1);
+  // //turn to face goal
+  // xdrive.turnInPlace(43.5f);
+  // xdrive.move(5.9, FORWARD);
+  // //shoot();
+  // xdrive.move(10.85, BACKWARD);
+  
+  // //
+  // xdrive.turnInPlace(-40.0f);
+  // xdrive.move(8, BACKWARD);
+  // xdrive.move(0.4, LEFT);
+  // IntakeNotGo();
+  // xdrive.move(100, BACKWARD, 2.0f);
+  // wait(20, seconds);
   // IntakeStop();
-
-  // xdrive.turnInPlace(-45.0f);
-  // xdrive.move(10.0f);
-
-  //approach goal
-  xdrive.move(2.1, RIGHT);
-  xdrive.move(22.1);
-  //turn to face goal
-  xdrive.turnInPlace(43.5f);
-  xdrive.move(5.9, FORWARD);
-  //shoot();
-  xdrive.move(10.85, BACKWARD);
   
-  //
-  xdrive.turnInPlace(-40.0f);
-  xdrive.move(8, BACKWARD);
-  xdrive.move(0.4, LEFT);
-  IntakeNotGo();
-  xdrive.move(100, BACKWARD, 2.0f);
-  wait(20, seconds);
-  IntakeStop();
+  // // //start
+  // // xdrive.move(0, LEFT);
+  // // xdrive.move(13, BACKWARD);
+  // // xdrive.turnInPlace(47.8f-90);
+  // // this_thread::sleep_for(1000);
+  // // IntakeGo();
+  // // xdrive.move(22.75, BACKWARD);
+
+  // // vex::this_thread::sleep_for(500);
   
-  // //start
-  // xdrive.move(0, LEFT);
-  // xdrive.move(13, BACKWARD);
-  // xdrive.turnInPlace(47.8f-90);
-  // this_thread::sleep_for(1000);
-  // IntakeGo();
-  // xdrive.move(22.75, BACKWARD);
+  // // //edge ball on the left
+  // // xdrive.move(13, FORWARD);
+  // // IntakeStop();
+  // // xdrive.move(10.5, RIGHT);
+  // // xdrive.move(4, BACKWARD);
+  // // IntakeGo();
+  // // vex::this_thread::sleep_for(500);
 
-  // vex::this_thread::sleep_for(500);
+  // // //first alligning
+  // // xdrive.move(2, LEFT);
+  // // xdrive.move(20, FORWARD);
+  // // IntakeStop();
+  // // xdrive.move(12,RIGHT);
+  // // xdrive.move(2.3f, BACKWARD);
+
+  // // //first deposit
+  // // IntakeNotGoSlo();
+  // // vex::this_thread::sleep_for(5000);
+
+  // // xdrive.move(2, BACKWARD);
+  // // xdrive.move(5, FORWARD);
+  // // IntakeStop();
+
+  // // //edge ball on the right
+  // // xdrive.move(10, FORWARD);
+  // // xdrive.turnInPlace(0.0f);
+  // // IntakeGo();
+  // // xdrive.move(14, BACKWARD);
+  // // this_thread::sleep_for(500);
+  // // IntakeStop();
+
+  // // //two red balls all the way on the right
+  // // xdrive.move(6, FORWARD);
+  // // xdrive.turnInPlace(47.86f);
+  // // xdrive.move(8, FORWARD);
+
+
+
+  // // end
+  // // start of plan https://www.desmos.com/calculator/peixhszlp3
+  // // xdrive.turnInPlace(90 - 48.65f);
+  // // xdrive.move(33.3f, BACKWARD);
   
-  // //edge ball on the left
-  // xdrive.move(13, FORWARD);
-  // IntakeStop();
-  // xdrive.move(10.5, RIGHT);
-  // xdrive.move(4, BACKWARD);
-  // IntakeGo();
-  // vex::this_thread::sleep_for(500);
-
-  // //first alligning
-  // xdrive.move(2, LEFT);
-  // xdrive.move(20, FORWARD);
-  // IntakeStop();
-  // xdrive.move(12,RIGHT);
-  // xdrive.move(2.3f, BACKWARD);
-
-  // //first deposit
-  // IntakeNotGoSlo();
-  // vex::this_thread::sleep_for(5000);
-
-  // xdrive.move(2, BACKWARD);
-  // xdrive.move(5, FORWARD);
-  // IntakeStop();
-
-  // //edge ball on the right
-  // xdrive.move(10, FORWARD);
-  // xdrive.turnInPlace(0.0f);
-  // IntakeGo();
-  // xdrive.move(14, BACKWARD);
-  // this_thread::sleep_for(500);
-  // IntakeStop();
-
-  // //two red balls all the way on the right
-  // xdrive.move(6, FORWARD);
-  // xdrive.turnInPlace(47.86f);
-  // xdrive.move(8, FORWARD);
-
-
-
-  // end
-  // start of plan https://www.desmos.com/calculator/peixhszlp3
-  // xdrive.turnInPlace(90 - 48.65f);
-  // xdrive.move(33.3f, BACKWARD);
+  // // xdrive.turnInPlace(53.57f + 180);
+  // // xdrive.move(52.2f, BACKWARD);
   
-  // xdrive.turnInPlace(53.57f + 180);
-  // xdrive.move(52.2f, BACKWARD);
+  // // xdrive.turnInPlace(-90.0f + 180);
+  // // xdrive.move(116.0f, BACKWARD);
   
-  // xdrive.turnInPlace(-90.0f + 180);
-  // xdrive.move(116.0f, BACKWARD);
+  // // xdrive.turnInPlace(112.7f + 180);
+  // // xdrive.move(80.23f, BACKWARD);
   
-  // xdrive.turnInPlace(112.7f + 180);
-  // xdrive.move(80.23f, BACKWARD);
+  // // xdrive.turnInPlace(180.0f + 180);
+  // // xdrive.move(56.0f, BACKWARD);
   
-  // xdrive.turnInPlace(180.0f + 180);
-  // xdrive.move(56.0f, BACKWARD);
-  
-  // xdrive.turnInPlace(-146.3f + 180);
-  // xdrive.move(28.84f, BACKWARD);
+  // // xdrive.turnInPlace(-146.3f + 180);
+  // // xdrive.move(28.84f, BACKWARD);
   autonRunning = false;
 }
 
@@ -297,13 +304,13 @@ void SetupFieldControl(){
   comp.autonomous(Auton);
 }
 
-void DeployMatchlaod(){
-  matchload.spinToPosition(20, degrees);
-}
+// void DeployMatchlaod(){
+//   matchload.spinToPosition(20, degrees);
+// }
 
-void StoreMatchload(){
-  matchload.spinToPosition(0, degrees);
-}
+// void StoreMatchload(){
+//   matchload.spinToPosition(0, degrees);
+// }
 
 void SetupControls(){
   Controller1.ButtonLeft.pressed(DescoreStore);
@@ -314,17 +321,19 @@ void SetupControls(){
   Controller1.ButtonB.pressed(DescoreToggle);
   // Controller1.ButtonA.pressed(shoot);
   Controller1.ButtonY.pressed(InvertControls);
-  Controller1.ButtonX.pressed(LeverDown);
+  // Controller1.ButtonX.pressed(LeverDown);
   
-  Controller1.ButtonX.released(LeverStop);
+  // Controller1.ButtonX.released(LeverStop);
 
   Controller1.ButtonL2.pressed(IntakeNotGoSlo);
   Controller1.ButtonL1.pressed(IntakeNotGo);
   Controller1.ButtonR1.pressed(IntakeGo);
+  Controller1.ButtonR2.pressed(IntakeStore);
 
   Controller1.ButtonL1.released(IntakeStop);
   Controller1.ButtonR1.released(IntakeStop);
   Controller1.ButtonL2.released(IntakeStop);
+  Controller1.ButtonR2.released(IntakeStop);
 }
 
 void SetupImu(){
@@ -351,12 +360,14 @@ int main() {
 //   vex::Gif gif("world.gif", 200, 0 );
 //   vex::Gif gif1 ("hapy.gif", 0, 0);
 
-  lever.setStopping(brake);
+  // lever.setStopping(brake);
 
   descore.resetPosition();
   descore.spinToPosition(175, degrees);
   DescoreStore();
-  matchload.setPosition(20, vex::rotationUnits::rev);
+  // matchload.setPosition(20, vex::rotationUnits::rev);
+
+  // xdrive.fieldOriented = true;
   
   while(1) {
     if(!comp.isFieldControl()){

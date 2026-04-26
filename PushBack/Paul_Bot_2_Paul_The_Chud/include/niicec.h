@@ -18,7 +18,7 @@ struct Vector2 {
     Vector2 operator*(int& scalar) const;
     Vector2 project(Vector2 other);
 
-    Vector2& Vector2::rotate(float deg);
+    Vector2& rotate(float deg);
 };
 
 struct PID {
