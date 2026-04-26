@@ -214,7 +214,8 @@ void XDrive::turnInPlace(int degrees){
         setTarget(0, 0, 1);
     }
 }
-void XDrive::move(float distance, DriveDirection dir, float AUTONSPEED){
+#define AUTONSPEED 0.25f
+void XDrive::move(float distance, DriveDirection dir){
     float trueDistance = fabs(distance / (wheelDiameter * M_PI) * 360.0f);
     float FLStart = Fleft.position(degrees);
     float FRStart = Fright.position(degrees);
@@ -253,53 +254,6 @@ void XDrive::move(float distance, DriveDirection dir, float AUTONSPEED){
     Stop();
     
 }
-
-void XDrive::movePID(float distance, DriveDirection dir, float AUTONSPEED){
-    PID movepid (1, 0.0f, 0.01f);
-    float trueDistance = fabs(distance / (wheelDiameter * M_PI) * 360.0f);
-    float FLStart = Fleft.position(degrees);
-    float FRStart = Fright.position(degrees);
-    float BLStart = Bleft.position(degrees);
-    float BRStart = Bright.position(degrees);
-    Vector2 fwdVec(
-        dir == FORWARD ? 100.0f : dir == BACKWARD ? -100.0f : 0.0f,
-        dir == LEFT    ? 100.0f : dir == RIGHT     ? -100.0f : 0.0f
-    );
-    Brain.Screen.clearScreen();
-    Brain.Screen.setCursor(1, 1);
-    Brain.Screen.print("tgt:%.0f", trueDistance);
-    Brain.Screen.render();
-    // wait(1000, msec);
-    headingPID.reset();
-    float currentSpeed = 0;
-    float startHeading = imu->rotation();
-    vex::timer t;
-    t.reset();
-    float correction = 0;
-    while(
-        (
-            fabs(Fleft.position(degrees) - FLStart) +
-            fabs(Fright.position(degrees) - FRStart) +
-            fabs(Bleft.position(degrees) - BLStart) +
-            fabs(Bright.position(degrees) - BRStart)
-        ) / 4 < trueDistance && t.time(msec) < 5000){
-        correction = headingPID.update(startHeading, imu->rotation());
-        currentSpeed = movepid.update(AUTONSPEED, (fabs(Fleft.velocity(pct)) +
-            fabs(Fright.velocity(pct)) +
-            fabs(Bleft.velocity(pct)) +
-            fabs(Bright.velocity(pct))
-        ) / 4);
-        setVel(
-             FleftV * fwdVec * -currentSpeed + correction,
-             BleftV * fwdVec *  currentSpeed + correction,
-            FrightV * fwdVec *  currentSpeed - correction,
-            BrightV * fwdVec * -currentSpeed- correction
-        );
-        wait(20, msec);
-    }
-    Stop();
-}
-
 void XDrive::turnInPlace(float targetDeg){
     PID pid(1.2f, 0.0f, 0.2f);
     float diff;

@@ -70,7 +70,6 @@ class XDrive {
     void setTarget(float controllerX, float controllerY, float turning);
     void runPath(const char* path);
     void UpdateMotorSpeeds();
-    void move(float distance, DriveDirection dir = FORWARD, float AUTONSPEED=0.25f);
+    void move(float distance, DriveDirection dir = FORWARD);
     void turnInPlace(float targetDeg);
-    void movePID(float distance, DriveDirection dir, float AUTONSPEED);
 };

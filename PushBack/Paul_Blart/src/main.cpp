@@ -20,7 +20,7 @@
 |          Inertial: PORT 9 | PORT 19: None                      |
 |       Intake Top: PORT 10 | PORT 20: None                      |
 |                     PORT 21: Radio                             |
------------------------------------------------------------------*/
+-----------------------------------------------------------------  WRONG PORTS*/
 
 /*-------------------
  | Brain 3-Wire Ports |
@@ -87,6 +87,7 @@ MCEC::DiffSwerveDrive drivetrain(
 );
 
 #define LEVER_STARTPOS 300
+#define LEVER_POSHIGH  270
 
 // Motors
   vex::motor intake = vex::motor(vex::PORT6, true);
@@ -102,16 +103,18 @@ vex::inertial inertial = vex::inertial(vex::PORT7);
 
 MCEC::Controller controls = MCEC::Controller(6);
 
-vex::digital_out turret(Brain.ThreeWirePort.A);
-vex::digital_out matchloader(Brain.ThreeWirePort.B);
+vex::digital_out descore(Brain.ThreeWirePort.B);
+vex::digital_out matchloader(Brain.ThreeWirePort.A);
+vex::digital_out turret(Brain.ThreeWirePort.C);
 
 bool turretUp = false;
 bool matchloadEngaged = false;
 bool matchloading = false;
 bool leverDown = false;
+bool descoreEngaged = false;
 
 enum DescorePositions{Stored, Targeting, HighGoal};
-DescorePositions descore = DescorePositions::Stored;
+DescorePositions descorePositions = DescorePositions::Stored;
 
 
 void StopMoving(){
@@ -129,6 +132,8 @@ void PosUpdate(){
   while(true){
     if(!drivetrain.runningAuton)
       drivetrain.UpdatePosition(dt);
+      controls.controller.Screen.setCursor(3, 1);
+      controls.controller.Screen.print("F:%f, L:%f", drivetrain.forward.GetAbsDistance()/(2 * M_PI), drivetrain.lateral.GetAbsDistance()/(2 * M_PI));
 
     vex::this_thread::sleep_for(20);
   }
@@ -154,19 +159,21 @@ void DriverLoop(){
 }
 
 void IntakeGo(){
-  if(!leverDown) return;
-  intake.spin(vex::forward, 80, vex::pct);
-  matchloadLeft.spin(vex::forward, 80, vex::pct);
-  matchloadRight.spin(vex::reverse, 80, vex::pct);
-}
-void IntakeGoSlow(){
-  if(!leverDown) return;
-  intake.spin(vex::forward, 30, vex::pct);
-}
-void IntakeNotGo(){
+  if(leverDown) return;
   intake.spin(vex::reverse, 80, vex::pct);
   matchloadLeft.spin(vex::reverse, 80, vex::pct);
   matchloadRight.spin(vex::forward, 80, vex::pct);
+}
+void IntakeGoSlow(){
+  if(leverDown) return;
+  intake.spin(vex::forward, 30, vex::pct);
+  matchloadLeft.spin(vex::reverse, 30, vex::pct);
+  matchloadRight.spin(vex::forward, 30, vex::pct);
+}
+void IntakeNotGo(){
+  intake.spin(vex::forward, 80, vex::pct);
+  matchloadLeft.spin(vex::forward, 80, vex::pct);
+  matchloadRight.spin(vex::reverse, 80, vex::pct);
 }
 void IntakeStop(){
   intake.stop();
@@ -182,34 +189,84 @@ void StopMatchload(){
   matchloadLeft.stop();
   matchloadRight.stop();
 }
+bool scoreRunning = false;
 
-void Score(){
-  lever2.spinToPosition(LEVER_STARTPOS, vex::degrees, false);
-  lever1.spinToPosition(0, vex::degrees, true);
+void LeverReset(){
+  IntakeStop();
   lever2.spinToPosition(0, vex::degrees, false);
-  lever1.spinToPosition(LEVER_STARTPOS, vex::degrees, true);
+  lever1.spinToPosition(300, vex::degrees, true);
+  scoreRunning = false;
+}
+
+void ScoreAction(){
+  int pos = turretUp ? LEVER_POSHIGH : LEVER_STARTPOS;
+  IntakeGo();
+  leverDown = false;
+  scoreRunning = true;
+  // go
+  if(!turretUp){
+    // lever1.setVelocity(50, vex::percent);
+    // lever2.setVelocity(50, vex::percent);
+
+    lever1.spinToPosition(0, vex::degrees, true);
+    lever2.spinToPosition(300, vex::degrees, false);
+  }else{
+    // lever1.setVelocity(100, vex::percent);
+    // lever2.setVelocity(100, vex::percent);
+
+    lever1.spinToPosition(30, vex::degrees, true);
+    lever2.spinToPosition(270, vex::degrees, false);
+  }
+  // return
+  LeverReset();
+}
+vex::thread scoreThread;
+void Score(){
+  if(!scoreRunning){
+    scoreThread = vex::thread(ScoreAction);
+  }else{
+    scoreThread.interrupt();
+    scoreThread = vex::thread(LeverReset);
+  }
 }
 
 void TurretDown();
 
 void TurretUp(){
-  turret.set(true);
+  turret.set(false);
   turretUp = true;
 }
 void TurretDown(){
-  turret.set(false);
+  turret.set(true);
   turretUp = false;
+}
+
+void DescoreDisengage(){
+  descore.set(true);
+  descoreEngaged = true;
+}
+void DescoreEngage(){
+  descore.set(false);
+  descoreEngaged = false;
 }
 
 void MatchloadEngage();
 
 void MatchloadDisengage(){
   matchloader.set(true);
-  matchloadEngaged = true;
+  matchloadEngaged = false;
 }
 void MatchloadEngage(){
   matchloader.set(false);
-  matchloadEngaged = false;
+  matchloadEngaged = true;
+}
+
+void MatchloadToggle(){
+  if(matchloadEngaged){
+    MatchloadDisengage();
+  }else{
+    MatchloadEngage();
+  }
 }
 
 void Driver(){
@@ -217,6 +274,7 @@ void Driver(){
   controls.controller.Screen.clearScreen();
   vex::thread Thread = vex::thread(PosUpdate);
 
+  TurretDown();
   while(1){
     DriverLoop();
     wait(20, vex::msec);
@@ -259,7 +317,7 @@ void FaceRight(){
 #define HIGOAL_POS 2.0f
 #define TARGET_POS 1.6f
 void StepDescoreForward(){
-  switch(descore){
+  switch(descorePositions){
     case DescorePositions::Stored:
       descore = DescorePositions::Targeting;
       // descoreMotor.spinToPosition(TARGET_POS, vex::rotationUnits::rev, false);
@@ -276,7 +334,7 @@ void StepDescoreForward(){
 }
 
 void StepDescoreBackward(){
-  switch(descore){
+  switch(descorePositions){
     case DescorePositions::Stored:
       descore = DescorePositions::HighGoal;
       // descoreMotor.spinToPosition(HIGOAL_POS, vex::rotationUnits::rev, false);
@@ -301,25 +359,22 @@ void EnableForward(){
 }
 
 void SetControls(){
-  controls.L2.SetOnPress(IntakeGo);
-  controls.R1.SetOnPress(IntakeGoSlow);
-  controls.R2.SetOnPress(IntakeNotGo);
+  controls.R2.SetOnPress(IntakeGo);
+  controls.L2.SetOnPress(IntakeNotGo);
 
   controls.Down.SetOnPress(TurretDown);
   controls.Up.SetOnPress(TurretUp);
 
   controls.A.SetOnPress(Score);
-  controls.X.SetOnPress(ResetPosition);
+  controls.X.SetOnPress(MatchloadToggle);
   controls.B.SetOnPress(DisableForward);
   controls.Y.SetOnPress(Auton);
 
   controls.B.SetOnRelease(EnableForward);
 
-  controls.Right.SetOnPress(MatchloadDisengage);
-  controls.Left.SetOnPress(MatchloadEngage);
+  controls.Right.SetOnPress(DescoreDisengage);
+  controls.Left.SetOnPress(DescoreEngage);
 
-  controls.R1.SetOnRelease(IntakeStop);
-  controls.L1.SetOnRelease(IntakeStop);
   controls.R2.SetOnRelease(IntakeStop);
   controls.L2.SetOnRelease(IntakeStop);
 }
@@ -352,7 +407,10 @@ int main(){
   InitInertial();
   SetControls();
 
+  lever1.setVelocity(100, vex::percent);
   lever1.setPosition(LEVER_STARTPOS, vex::deg);
+  
+  lever2.setVelocity(100, vex::percent);
   lever2.setPosition(0, vex::deg);
 
   // drivetrain.frontLeft.SetPIDVariables (0.0f, 0.0f, 0.0f);
@@ -388,8 +446,8 @@ int main(){
   controls.controller.Screen.print("%.2f  %.2f", drivetrain.frontLeft.rotation.angle(), drivetrain.frontRight.rotation.angle());
   controls.controller.Screen.setCursor(2, 1);
   controls.controller.Screen.print("%.2f  %.2f", drivetrain.backLeft.rotation.angle(), drivetrain.backRight.rotation.angle());
-  controls.controller.Screen.setCursor(3, 1);
-  controls.controller.Screen.print("%d, %d", vex::forward, vex::reverse);
+  // controls.controller.Screen.setCursor(3, 1);
+  // controls.controller.Screen.print("%d, %d", vex::forward, vex::reverse);
   while(1) {
     if(!comp.isFieldControl()){
       // DriverLoop();

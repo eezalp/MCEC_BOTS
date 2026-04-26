@@ -193,73 +193,19 @@ void Auton(){
 
   // xdrive.turnInPlace(-45.0f);
   // xdrive.move(10.0f);
-
-  //approach goal
-  xdrive.move(2.1, RIGHT);
-  xdrive.move(22.1);
-  //turn to face goal
-  xdrive.turnInPlace(43.5f);
-  xdrive.move(5.9, FORWARD);
-  shoot();
-  xdrive.move(10.85, BACKWARD);
   
-  //
-  xdrive.turnInPlace(-40.0f);
-  xdrive.move(8, BACKWARD);
-  xdrive.move(0.4, LEFT);
-  IntakeNotGo();
-  xdrive.move(100, BACKWARD, 2.0f);
-  wait(20, seconds);
+  //start
+  xdrive.move(1, LEFT);
+
+  xdrive.turnInPlace(47.86f-90);
+  IntakeGo();
+  xdrive.move(26.0f, BACKWARD);
+
+  vex::this_thread::sleep_for(400);
   IntakeStop();
-  
-  // //start
-  // xdrive.move(0, LEFT);
-  // xdrive.move(13, BACKWARD);
-  // xdrive.turnInPlace(47.8f-90);
-  // this_thread::sleep_for(1000);
-  // IntakeGo();
-  // xdrive.move(22.75, BACKWARD);
 
-  // vex::this_thread::sleep_for(500);
-  
-  // //edge ball on the left
-  // xdrive.move(13, FORWARD);
-  // IntakeStop();
-  // xdrive.move(10.5, RIGHT);
-  // xdrive.move(4, BACKWARD);
-  // IntakeGo();
-  // vex::this_thread::sleep_for(500);
-
-  // //first alligning
-  // xdrive.move(2, LEFT);
-  // xdrive.move(20, FORWARD);
-  // IntakeStop();
-  // xdrive.move(12,RIGHT);
-  // xdrive.move(2.3f, BACKWARD);
-
-  // //first deposit
-  // IntakeNotGoSlo();
-  // vex::this_thread::sleep_for(5000);
-
-  // xdrive.move(2, BACKWARD);
-  // xdrive.move(5, FORWARD);
-  // IntakeStop();
-
-  // //edge ball on the right
-  // xdrive.move(10, FORWARD);
-  // xdrive.turnInPlace(0.0f);
-  // IntakeGo();
-  // xdrive.move(14, BACKWARD);
-  // this_thread::sleep_for(500);
-  // IntakeStop();
-
-  // //two red balls all the way on the right
-  // xdrive.move(6, FORWARD);
-  // xdrive.turnInPlace(47.86f);
-  // xdrive.move(8, FORWARD);
-
-
-
+  xdrive.move(29.3f, FORWARD);
+  xdrive.move(19.8f, RIGHT);
   // end
   // start of plan https://www.desmos.com/calculator/peixhszlp3
   // xdrive.turnInPlace(90 - 48.65f);
@@ -283,8 +229,10 @@ void Auton(){
 }
 
 void SetupFieldControl(){
-  comp.drivercontrol(Driver);
-  comp.autonomous(Auton);
+  if(comp.isFieldControl()){
+    comp.drivercontrol(Driver);
+    comp.autonomous(Auton);
+  }
 }
 
 void DeployMatchlaod(){
